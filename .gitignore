@@ -6,7 +6,6 @@
 venv/
 .vscode/
 examples/
-configs/
 .github/
 
 runs/

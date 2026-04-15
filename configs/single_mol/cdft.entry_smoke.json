@@ -1,0 +1,58 @@
+{
+  "train_mode": "cdft",
+  "encoder_type": "single_mol",
+  "train_h5": [
+    "examples/output/electronic_h5/cdft_example_shard_000000.h5"
+  ],
+  "val_h5": [
+    "examples/output/electronic_h5/cdft_example_shard_000000.h5"
+  ],
+  "batch_size": 2,
+  "num_workers": 0,
+  "mask_ratio": 0.0,
+  "mask_token_id": 94,
+  "min_masked": 1,
+  "max_masked": 0,
+  "noise_std": 0.0,
+  "no_center_coords": false,
+  "no_recenter_noisy": false,
+  "emb_dim": 256,
+  "inv_layer": 2,
+  "se3_layer": 4,
+  "heads": 8,
+  "atom_vocab_size": 128,
+  "cutoff": 5.0,
+  "num_kernel": 128,
+  "path_dropout": 0.1,
+  "activation_dropout": 0.1,
+  "attn_dropout": 0.1,
+  "epochs": 1,
+  "lr": 0.0001,
+  "weight_decay": 0.01,
+  "grad_clip": 1.0,
+  "warmup_steps": 10,
+  "lr_scheduler": "none",
+  "vip_vea_weight": 1.0,
+  "fukui_weight": 1.0,
+  "vip_vea_keys": [
+    "vip",
+    "vea"
+  ],
+  "fukui_keys": [
+    "f_plus",
+    "f_minus",
+    "f_zero"
+  ],
+  "device": "cpu",
+  "seed": 42,
+  "out_dir": "runs/cdft_entry_smoke",
+  "save_every": 1,
+  "save_every_steps": 0,
+  "log_interval": 1,
+  "log_file": "train.log",
+  "save_optimizer": true,
+  "init_ckpt": null,
+  "init_strict": false,
+  "restart": null,
+  "restart_ignore_config": false
+}

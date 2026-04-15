@@ -1,0 +1,89 @@
+# ReacFormer SO(2) - Electron Density Pretraining
+# Task: Electron density prediction
+# Run: python -m uni_react.train_pretrain_density --config configs/reacformer_so2/density.yaml
+
+# ---------------------------------------------------------------------------
+# Training mode
+# ---------------------------------------------------------------------------
+train_mode: electron_density
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+train_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/EDBench/density_h5_train/*.h5
+val_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/EDBench/density_h5_val/*.h5
+batch_size: 48
+num_workers: 16
+
+# ---------------------------------------------------------------------------
+# Data augmentation (minimal for density)
+# ---------------------------------------------------------------------------
+# Compatibility placeholders only. The density trainer currently ignores these
+# fields, but we keep them here so density configs stay shape-compatible with
+# the rest of the project config style.
+mask_ratio: 0.0
+noise_std: 0.0
+no_center_coords: false
+no_recenter_noisy: false
+
+# ---------------------------------------------------------------------------
+# Encoder type
+# ---------------------------------------------------------------------------
+encoder_type: reacformer_so2
+
+# ---------------------------------------------------------------------------
+# Model architecture - ReacFormer SO(2)
+# ---------------------------------------------------------------------------
+emb_dim: 256
+inv_layer: 2
+se3_layer: 4
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 128
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+
+# ---------------------------------------------------------------------------
+# Density prediction settings
+# ---------------------------------------------------------------------------
+# Compatibility placeholders only. These are accepted by the config schema for
+# forward compatibility, but the current density training loop does not consume
+# them directly.
+density_grid_size: 64
+density_weight: 1.0
+
+# ---------------------------------------------------------------------------
+# Optimisation
+# ---------------------------------------------------------------------------
+epochs: 20
+lr: 1.0e-4              # Compatibility only; actual training uses descriptor_lr/head_lr below
+weight_decay: 1.0e-2
+grad_clip: 1.0
+warmup_steps: 1000      # Compatibility only; not used by current density scheduler
+lr_scheduler: cosine
+descriptor_lr: 2.0e-5
+head_lr: 2.0e-4
+num_query_points: 2048
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+device: cuda
+seed: 42
+out_dir: runs/reacformer_so2_density
+save_every: 5
+save_optimizer: true    # Compatibility only; optimizer state is still saved by trainer checkpoints
+log_interval: 100
+log_file: train.log
+center_coords: true
+init_strict: false
+restart: ""
+point_hidden_dim: 128
+cond_hidden_dim: 64
+head_hidden_dim: 512
+radial_sigma: 1.5
+# init_ckpt: runs/reacformer_so2_geometric/best.pt  # Load from stage 1

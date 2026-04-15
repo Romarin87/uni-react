@@ -1,0 +1,75 @@
+# ReacFormer SO(2) - Geometric Structure Pretraining
+# Stage 1: Atom masking + coordinate denoising + charge prediction
+# SO(2) equivariant (lighter than SE(3), faster training)
+# Run: python -m uni_react.train_pretrain_geometric --config configs/reacformer_so2/geometric.yaml
+
+# ---------------------------------------------------------------------------
+# Training mode
+# ---------------------------------------------------------------------------
+train_mode: geometric_structure
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+train_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
+val_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
+batch_size: 256         # Per GPU batch size (total = 256 * 8 = 2048) - Reduced for memory
+num_workers: 16
+
+# ---------------------------------------------------------------------------
+# Data augmentation
+# ---------------------------------------------------------------------------
+mask_ratio: 0.15
+mask_token_id: 94
+min_masked: 1
+max_masked: 0
+noise_std: 0.1
+no_center_coords: false
+no_recenter_noisy: false
+
+# ---------------------------------------------------------------------------
+# Encoder type
+# ---------------------------------------------------------------------------
+encoder_type: reacformer_so2
+
+# ---------------------------------------------------------------------------
+# Model architecture - ReacFormer SO(2)
+# ---------------------------------------------------------------------------
+emb_dim: 256
+inv_layer: 2
+se3_layer: 4
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 128
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+
+# ---------------------------------------------------------------------------
+# Optimisation
+# ---------------------------------------------------------------------------
+epochs: 20
+lr: 1.4e-4              # Scale down with batch size (2e-4 / sqrt(2) ≈ 1.4e-4)
+weight_decay: 1.0e-2
+grad_clip: 1.0
+warmup_steps: 1000
+lr_scheduler: cosine
+
+# ---------------------------------------------------------------------------
+# Loss weights
+# ---------------------------------------------------------------------------
+atom_weight: 1.0
+coord_weight: 1.0
+charge_weight: 1.0
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+device: cuda
+seed: 42
+out_dir: runs/reacformer_so2_geometric
+save_every: 1           # Save every epoch
+save_optimizer: true

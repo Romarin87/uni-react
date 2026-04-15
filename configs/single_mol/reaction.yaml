@@ -1,0 +1,50 @@
+# SingleMol Encoder - Reaction Triplet Pretraining
+# Stage 3: Reaction consistency learning (reactant + reagent → product)
+# Run: python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction.yaml
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+train_h5: /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/React/RGD1_react.h5
+val_h5: /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/React/t1x_react.h5
+batch_size: 64
+num_workers: 16
+
+# ---------------------------------------------------------------------------
+# Model architecture - SingleMol
+# ---------------------------------------------------------------------------
+encoder_type: single_mol
+emb_dim: 256
+inv_layer: 2
+se3_layer: 4
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 128
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+
+# ---------------------------------------------------------------------------
+# Reaction model settings
+# ---------------------------------------------------------------------------
+teacher_momentum: 0.999
+consistency_weight: 1.0
+
+# ---------------------------------------------------------------------------
+# Optimisation
+# ---------------------------------------------------------------------------
+epochs: 20
+backbone_lr: 2.0e-5
+head_lr: 2.0e-4
+weight_decay: 1.0e-2
+grad_clip: 1.0
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+device: cuda
+seed: 42
+out_dir: runs/single_mol_reaction
+save_every: 5
+# init_ckpt: runs/single_mol_cdft/best.pt  # Load from stage 2
