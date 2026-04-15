@@ -102,7 +102,12 @@ class FinetuneQM9Trainer(BaseTrainer):
             rank=rank,
             world_size=world_size,
             device=device,
-            find_unused_parameters=bool(distributed and cfg.freeze_backbone_epochs > 0),
+            find_unused_parameters=bool(
+                distributed and (
+                    cfg.freeze_backbone_epochs > 0
+                    or cfg.encoder_type in {"reacformer_se3", "reacformer_so2"}
+                )
+            ),
             checkpoint_config=dataclasses.asdict(cfg),
             save_optimizer=cfg.save_optimizer,
         )
