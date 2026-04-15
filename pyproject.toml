@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uni-react"
+version = "0.2.0"
+description = "3D molecular pretraining and downstream property prediction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["molecular-ml", "pretraining", "se3-equivariant", "qm9"]
+
+dependencies = [
+    "torch>=2.0",
+    "numpy>=1.24",
+    "h5py>=3.8",
+    "tqdm>=4.65",
+    "pyyaml>=6.0",
+    "e3nn>=0.5",
+]
+
+[project.optional-dependencies]
+qm9 = [
+    "torch_geometric>=2.3",
+]
+loggers = [
+    "wandb>=0.15",
+    "tensorboard>=2.13",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1",
+    "mypy>=1.5",
+]
+all = [
+    "uni-react[qm9,loggers,dev]",
+]
+
+[project.scripts]
+uni-react-train-geometric = "uni_react.train_pretrain_geometric:main"
+uni-react-train-cdft = "uni_react.train_pretrain_cdft:main"
+uni-react-train-reaction = "uni_react.train_pretrain_reaction:main"
+uni-react-finetune-qm9 = "uni_react.train_finetune_qm9:main"
+uni-react-convert-ckpt = "uni_react.tools.convert_ckpt:main"
+uni-react-compare-qm9 = "uni_react.tools.compare_qm9_mae:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["uni_react*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501", "F401", "F403"]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

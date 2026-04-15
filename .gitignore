@@ -1,0 +1,30 @@
+**/.DS_Store
+**/__pycache__/
+*.py[cod]
+
+.venv/
+venv/
+.vscode/
+examples/
+configs/
+.github/
+
+runs/
+qm9_pyg/
+examples/output/runs/
+
+*.pt
+*.pth
+
+# Python package metadata
+*.egg-info/
+dist/
+build/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# pytest cache
+.pytest_cache/
