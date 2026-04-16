@@ -16,6 +16,7 @@ from .qm9_model import QM9FineTuneNet
 from .reaction_model import ReactionPretrainNet
 from .reacformer_se3 import ReacFormerSE3Encoder
 from .reacformer_so2 import ReacFormerSO2Encoder
+from .reacformer_hybrid import ReacFormerHybridEncoder
 
 __all__ = [
     "SingleMolEncoder",
@@ -27,4 +28,5 @@ __all__ = [
     "ReactionPretrainNet",
     "ReacFormerSE3Encoder",
     "ReacFormerSO2Encoder",
+    "ReacFormerHybridEncoder",
 ]

@@ -160,7 +160,7 @@ def run_density_entry() -> None:
         rank=rank,
         world_size=world_size,
         device=device,
-        find_unused_parameters=cfg.encoder_type in {"reacformer_se3", "reacformer_so2"},
+        find_unused_parameters=cfg.encoder_type in {"reacformer_se3", "reacformer_so2", "reacformer_hybrid"},
     )
 
     start_epoch = 1

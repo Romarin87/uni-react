@@ -5,6 +5,7 @@ import torch
 
 from uni_react.configs import PretrainConfig
 from uni_react.encoders import (
+    ReacFormerHybridEncoder,
     ReacFormerSE3Encoder,
     ReacFormerSO2Encoder,
     SingleMolEncoder,
@@ -41,6 +42,18 @@ def build_pretrain_encoder(cfg: PretrainConfig) -> torch.nn.Module:
         )
     if cfg.encoder_type == "reacformer_so2":
         return ReacFormerSO2Encoder(
+            emb_dim=cfg.emb_dim,
+            num_layers=cfg.se3_layer,
+            heads=cfg.heads,
+            atom_vocab_size=cfg.atom_vocab_size,
+            cutoff=cfg.cutoff,
+            num_rbf=cfg.num_kernel,
+            path_dropout=cfg.path_dropout,
+            activation_dropout=cfg.activation_dropout,
+            attn_dropout=cfg.attn_dropout,
+        )
+    if cfg.encoder_type == "reacformer_hybrid":
+        return ReacFormerHybridEncoder(
             emb_dim=cfg.emb_dim,
             num_layers=cfg.se3_layer,
             heads=cfg.heads,

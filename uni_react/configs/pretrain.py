@@ -45,7 +45,7 @@ class PretrainConfig:
     # Model architecture
     # ------------------------------------------------------------------
     encoder_type: str = "single_mol"
-    """Encoder type: single_mol, reacformer_se3, or reacformer_so2."""
+    """Encoder type: single_mol, reacformer_se3, reacformer_so2, or reacformer_hybrid."""
     
     emb_dim: int = 256
     inv_layer: int = 2

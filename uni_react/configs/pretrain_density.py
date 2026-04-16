@@ -79,8 +79,12 @@ class DensityPretrainConfig:
     restart_ignore_config: bool = False
 
     def __post_init__(self) -> None:
-        if self.encoder_type not in {"single_mol", "reacformer_se3", "reacformer_so2"}:
-            raise ValueError(f"encoder_type must be one of single_mol/reacformer_se3/reacformer_so2, got {self.encoder_type!r}")
+        if self.encoder_type not in {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid"}:
+            raise ValueError(
+                "encoder_type must be one of "
+                "single_mol/reacformer_se3/reacformer_so2/reacformer_hybrid, "
+                f"got {self.encoder_type!r}"
+            )
         if self.batch_size <= 0:
             raise ValueError(f"batch_size must be > 0, got {self.batch_size}")
         if self.num_workers < 0:

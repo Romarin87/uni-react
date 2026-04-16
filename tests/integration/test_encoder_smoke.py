@@ -42,3 +42,26 @@ def test_padding_mask_respected(encoder):
         out = encoder(z, r, atom_padding=pad)
     # Padded positions should be zeroed out
     assert out["node_feats"][0, 3:].abs().sum() == 0.0
+
+
+def test_hybrid_qm9_encoder_forward():
+    from uni_react.encoders import ReacFormerHybridEncoder
+
+    encoder = ReacFormerHybridEncoder(
+        emb_dim=32,
+        num_layers=2,
+        heads=4,
+        atom_vocab_size=16,
+        cutoff=3.0,
+        num_rbf=16,
+    )
+    z = torch.randint(1, 8, (2, 5))
+    r = torch.randn(2, 5, 3)
+    with torch.no_grad():
+        out = encoder(z, r)
+    for key in ("node_feats", "node_vec", "node_tensor", "graph_feats", "coords_input", "atom_padding"):
+        assert key in out, f"missing key: {key}"
+    assert out["node_feats"].shape == (2, 5, 32)
+    assert out["node_vec"].shape == (2, 5, 3, 32)
+    assert out["node_tensor"].shape == (2, 5, 5, 32)
+    assert out["graph_feats"].shape == (2, 32)

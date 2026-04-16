@@ -121,9 +121,19 @@ class ThreeBodyAggregation(torch.nn.Module):
         # Legendre polynomial basis: (B, N, N, N, L+1)
         ang_feat = legendre_basis(cos_theta, self.legendre_order)  # (B,N,N,N,L+1)
 
-        # Weight pairs (j,k) and aggregate over j and k:
+        # Weight unordered neighbour pairs (j, k), excluding the degenerate self-pair j == k.
         # w_ij * w_ik: (B,N,N,1) outer → (B,N,N,N)
         w_jk = (w.squeeze(-1).unsqueeze(-1)) * (w.squeeze(-1).unsqueeze(-2))  # (B,N,N,N)
+        pair_mask = torch.triu(
+            torch.ones(
+                rbf.shape[1],
+                rbf.shape[2],
+                device=rbf.device,
+                dtype=w_jk.dtype,
+            ),
+            diagonal=1,
+        ).view(1, 1, rbf.shape[1], rbf.shape[2])
+        w_jk = w_jk * pair_mask
 
         # Weighted sum over j and k: (B,N,L+1)
         agg = torch.einsum("bijk,bijkl->bil", w_jk, ang_feat)

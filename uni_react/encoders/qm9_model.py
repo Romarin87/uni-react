@@ -43,6 +43,7 @@ class QM9FineTuneNet(torch.nn.Module):
             attn_dropout=attn_dropout,
             num_kernel=num_kernel,
         )
+        self.num_targets = int(num_targets)
         self.reg_head = torch.nn.Sequential(
             torch.nn.LayerNorm(emb_dim),
             torch.nn.Linear(emb_dim, head_hidden_dim),
@@ -50,7 +51,6 @@ class QM9FineTuneNet(torch.nn.Module):
             torch.nn.Dropout(head_dropout),
             torch.nn.Linear(head_hidden_dim, num_targets),
         )
-        self.num_targets = int(num_targets)
 
     def forward(
         self,
@@ -66,10 +66,10 @@ class QM9FineTuneNet(torch.nn.Module):
             atom_padding=atom_padding,
         )
         node_feats = backbone_out["node_feats"]
-        valid  = (~atom_padding).unsqueeze(-1)
-        denom  = valid.sum(dim=1).clamp_min(1)
+        valid = (~atom_padding).unsqueeze(-1)
+        denom = valid.sum(dim=1).clamp_min(1)
         pooled = (node_feats * valid).sum(dim=1) / denom
-        pred   = self.reg_head(pooled)
+        pred = self.reg_head(pooled)
         if self.num_targets == 1:
             pred = pred.squeeze(-1)
         return {"pred": pred, "node_feats": node_feats, "pooled_feats": pooled}

@@ -119,3 +119,8 @@ class TestEntrypointUtils:
         written = dump_runtime_config(cfg, tmp_path)
         assert written.name == "config.json"
         assert written.exists()
+
+
+def test_hybrid_qm9_encoder_is_valid_in_configs():
+    cfg = FinetuneQM9Config(encoder_type="reacformer_hybrid")
+    assert cfg.encoder_type == "reacformer_hybrid"
