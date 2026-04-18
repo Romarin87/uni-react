@@ -79,10 +79,10 @@ class DensityPretrainConfig:
     restart_ignore_config: bool = False
 
     def __post_init__(self) -> None:
-        if self.encoder_type not in {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid"}:
+        if self.encoder_type not in {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}:
             raise ValueError(
                 "encoder_type must be one of "
-                "single_mol/reacformer_se3/reacformer_so2/reacformer_hybrid, "
+                "single_mol/reacformer_se3/reacformer_so2/reacformer_hybrid/gotennet_l, "
                 f"got {self.encoder_type!r}"
             )
         if self.batch_size <= 0:

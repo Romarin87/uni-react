@@ -67,6 +67,17 @@ class TripletEdgeAggregation(torch.nn.Module):
             torch.nn.SiLU(),
             torch.nn.Linear(hidden, emb_dim),
         )
+        self.triplet_score = torch.nn.Sequential(
+            torch.nn.Linear(emb_dim * 2, hidden),
+            torch.nn.SiLU(),
+            torch.nn.Linear(hidden, 1),
+        )
+        self.triplet_mix = torch.nn.Sequential(
+            torch.nn.LayerNorm(emb_dim * 2),
+            torch.nn.Linear(emb_dim * 2, hidden),
+            torch.nn.SiLU(),
+            torch.nn.Linear(hidden, emb_dim),
+        )
         self.edge_gate = torch.nn.Sequential(
             torch.nn.Linear(emb_dim, emb_dim),
             torch.nn.Sigmoid(),
@@ -118,7 +129,17 @@ class TripletEdgeAggregation(torch.nn.Module):
         pair_mask = access.unsqueeze(-1) * topk_mask.unsqueeze(2)
         anchor_idx = torch.arange(N, device=node_s.device).view(1, 1, N, 1)
         pair_mask = pair_mask.masked_fill(anchor_idx == topk_idx.unsqueeze(2), 0.0)
-        triplet_ctx = (triplet_weight * neighbour_feat * pair_mask.unsqueeze(-1)).sum(dim=3)
+        triplet_pair = triplet_weight * neighbour_feat
+        pair_logits = self.triplet_score(torch.cat([triplet_weight, neighbour_feat], dim=-1)).squeeze(-1)
+        pair_logits = pair_logits.masked_fill(pair_mask <= 0, float("-inf"))
+        pair_attn = torch.softmax(pair_logits, dim=3)
+        pair_attn = torch.where(pair_mask > 0, pair_attn, torch.zeros_like(pair_attn))
+        triplet_attn = (triplet_pair * pair_attn.unsqueeze(-1)).sum(dim=3)
+
+        masked_pair = triplet_pair.masked_fill(pair_mask.unsqueeze(-1) <= 0, float("-inf"))
+        triplet_max = masked_pair.max(dim=3).values
+        triplet_max = torch.where(torch.isfinite(triplet_max), triplet_max, torch.zeros_like(triplet_max))
+        triplet_ctx = self.triplet_mix(torch.cat([triplet_attn, triplet_max], dim=-1))
 
         edge_feat = self.edge_norm(edge_base + triplet_ctx)
         edge_feat = self.edge_gate(edge_feat) * edge_feat
@@ -183,9 +204,12 @@ class ScalarGlobalContextBlock(torch.nn.Module):
         node_s: Tensor,
         atom_padding: Tensor,
         bond_graph: Tensor,
+        prev_token: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         pooled = self._masked_mean(node_s, atom_padding)
-        token = self.token_proj(torch.cat([pooled, bond_graph], dim=-1)).unsqueeze(1)
+        if prev_token is None:
+            prev_token = torch.zeros_like(pooled)
+        token = self.token_proj(torch.cat([pooled + prev_token, bond_graph], dim=-1)).unsqueeze(1)
 
         token_update, _ = self.token_attn(
             query=token,
@@ -246,6 +270,14 @@ class HybridQM9SE3Block(torch.nn.Module):
         )
         self.edge_bias_proj = NonLinear(num_rbf, heads, hidden=emb_dim)
         self.fusion = CrossPathFusion(emb_dim=emb_dim)
+        self.scalar_ffn = torch.nn.Sequential(
+            torch.nn.LayerNorm(emb_dim),
+            torch.nn.Linear(emb_dim, emb_dim * 4),
+            torch.nn.SiLU(),
+            torch.nn.Dropout(path_dropout),
+            torch.nn.Linear(emb_dim * 4, emb_dim),
+        )
+        self.scalar_drop = DropPath(path_dropout)
 
     def forward(
         self,
@@ -294,6 +326,7 @@ class HybridQM9SE3Block(torch.nn.Module):
             node_v=node_v,
             node_t=node_t,
         )
+        node_s = node_s + self.scalar_drop(self.scalar_ffn(node_s))
         return node_s, node_v, node_t, edge_bias, bond_graph
 
 
@@ -404,6 +437,7 @@ class ReacFormerHybridEncoder(torch.nn.Module):
                     node_s=node_s,
                     atom_padding=atom_padding,
                     bond_graph=bond_graph,
+                    prev_token=global_token,
                 )
                 global_idx += 1
 

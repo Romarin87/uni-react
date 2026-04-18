@@ -12,6 +12,7 @@ from uni_react.configs import (
 )
 from uni_react.configs.io import dump_config, load_config, merge_cli_args
 from uni_react.training.entrypoint_utils import dump_runtime_config
+from uni_react.utils.qm9_dataset import get_qm9_target_index_map
 
 
 class TestLoadDumpConfig:
@@ -124,3 +125,31 @@ class TestEntrypointUtils:
 def test_hybrid_qm9_encoder_is_valid_in_configs():
     cfg = FinetuneQM9Config(encoder_type="reacformer_hybrid")
     assert cfg.encoder_type == "reacformer_hybrid"
+
+
+def test_gotennet_l_qm9_encoder_is_valid_in_configs():
+    cfg = FinetuneQM9Config(encoder_type="gotennet_l")
+    assert cfg.encoder_type == "gotennet_l"
+
+
+def test_gotennet_qm9_split_and_target_variant_are_valid_in_configs():
+    cfg = FinetuneQM9Config(
+        encoder_type="gotennet_l",
+        split="gotennet",
+        qm9_target_variant="gotennet",
+        lr_factor=0.8,
+        lr_patience=15,
+        lr_min=1e-7,
+        early_stopping_patience=150,
+    )
+    assert cfg.split == "gotennet"
+    assert cfg.qm9_target_variant == "gotennet"
+    assert cfg.lr_factor == pytest.approx(0.8)
+
+
+def test_gotennet_qm9_target_index_variant_uses_official_energy_columns():
+    mapping = get_qm9_target_index_map("gotennet")
+    assert mapping["U0"] == 7
+    assert mapping["U"] == 8
+    assert mapping["H"] == 9
+    assert mapping["G"] == 10

@@ -17,6 +17,8 @@ from .reaction_model import ReactionPretrainNet
 from .reacformer_se3 import ReacFormerSE3Encoder
 from .reacformer_so2 import ReacFormerSO2Encoder
 from .reacformer_hybrid import ReacFormerHybridEncoder
+from .gotennet_l import GotenNetLEncoder
+from .gotennet_qm9_model import GotenNetQM9Net
 
 __all__ = [
     "SingleMolEncoder",
@@ -29,4 +31,6 @@ __all__ = [
     "ReacFormerSE3Encoder",
     "ReacFormerSO2Encoder",
     "ReacFormerHybridEncoder",
+    "GotenNetLEncoder",
+    "GotenNetQM9Net",
 ]

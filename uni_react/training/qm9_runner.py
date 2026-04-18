@@ -23,7 +23,9 @@ from uni_react.training.optimizer import build_split_lr_optimizer
 from uni_react.training.pretrain_builders import build_pretrain_encoder
 from uni_react.training.seed import set_seed
 from uni_react.trainers.finetune_qm9 import FinetuneQM9Trainer
-from uni_react.utils.qm9_dataset import QM9_TARGETS
+from uni_react.trainers.gotennet_qm9 import GotenNetQM9Trainer
+from uni_react.utils.qm9_dataset import QM9_TARGETS, get_qm9_atomref
+from uni_react.registry import SCHEDULER_REGISTRY
 
 import uni_react.loggers  # noqa: F401
 
@@ -133,25 +135,55 @@ def run_qm9_entry() -> None:
     if is_main_process(rank):
         dump_runtime_config(cfg, cfg.out_dir)
 
-    from uni_react.encoders import QM9FineTuneNet
     descriptor = build_pretrain_encoder(cfg)
+    if cfg.encoder_type == "gotennet_l":
+        if len(targets) != 1:
+            raise ValueError("gotennet_l with official QM9 heads only supports single-target runs.")
+        from uni_react.encoders.gotennet_qm9_model import GotenNetQM9Net, build_gotennet_qm9_metadata
 
-    model = QM9FineTuneNet(
-        emb_dim=cfg.emb_dim,
-        inv_layer=cfg.inv_layer,
-        se3_layer=cfg.se3_layer,
-        heads=cfg.heads,
-        atom_vocab_size=cfg.atom_vocab_size,
-        cutoff=cfg.cutoff,
-        num_kernel=cfg.num_kernel,
-        path_dropout=cfg.path_dropout,
-        activation_dropout=cfg.activation_dropout,
-        attn_dropout=cfg.attn_dropout,
-        head_hidden_dim=cfg.head_hidden_dim,
-        head_dropout=cfg.head_dropout,
-        num_targets=len(targets),
-        descriptor=descriptor,
-    ).to(device)
+        target_name = targets[0]
+        atomref = None if target_name.lower() in {"mu", "r2"} else get_qm9_atomref(
+            root=cfg.data_root,
+            target=target_name,
+            max_z=max(cfg.atom_vocab_size, 100),
+            force_reload=cfg.force_reload,
+            target_index_variant=cfg.qm9_target_variant,
+        )
+        metadata = build_gotennet_qm9_metadata(target=target_name, atomref=atomref)
+        model = GotenNetQM9Net(
+            emb_dim=cfg.emb_dim,
+            inv_layer=cfg.inv_layer,
+            se3_layer=cfg.se3_layer,
+            heads=cfg.heads,
+            atom_vocab_size=cfg.atom_vocab_size,
+            cutoff=cfg.cutoff,
+            num_kernel=cfg.num_kernel,
+            path_dropout=cfg.path_dropout,
+            activation_dropout=cfg.activation_dropout,
+            attn_dropout=cfg.attn_dropout,
+            descriptor=descriptor,
+            target=target_name,
+            metadata=metadata,
+        ).to(device)
+    else:
+        from uni_react.encoders import QM9FineTuneNet
+
+        model = QM9FineTuneNet(
+            emb_dim=cfg.emb_dim,
+            inv_layer=cfg.inv_layer,
+            se3_layer=cfg.se3_layer,
+            heads=cfg.heads,
+            atom_vocab_size=cfg.atom_vocab_size,
+            cutoff=cfg.cutoff,
+            num_kernel=cfg.num_kernel,
+            path_dropout=cfg.path_dropout,
+            activation_dropout=cfg.activation_dropout,
+            attn_dropout=cfg.attn_dropout,
+            head_hidden_dim=cfg.head_hidden_dim,
+            head_dropout=cfg.head_dropout,
+            num_targets=len(targets),
+            descriptor=descriptor,
+        ).to(device)
 
     if cfg.pretrained_ckpt:
         load_init_checkpoint(
@@ -163,25 +195,42 @@ def run_qm9_entry() -> None:
             logger=None,
         )
 
-    optimizer = build_split_lr_optimizer(
-        model=model,
-        backbone_module=model.descriptor,
-        backbone_lr=cfg.backbone_lr,
-        head_lr=cfg.head_lr,
-        weight_decay=cfg.weight_decay,
-        backbone_prefix="descriptor.",
-    )
+    if cfg.encoder_type == "gotennet_l":
+        optimizer = torch.optim.AdamW(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=cfg.head_lr,
+            weight_decay=cfg.weight_decay,
+        )
+    else:
+        optimizer = build_split_lr_optimizer(
+            model=model,
+            backbone_module=model.descriptor,
+            backbone_lr=cfg.backbone_lr,
+            head_lr=cfg.head_lr,
+            weight_decay=cfg.weight_decay,
+            backbone_prefix="descriptor.",
+        )
+
+    scheduler = None
+    if cfg.lr_scheduler in {"cosine", "linear"}:
+        scheduler = SCHEDULER_REGISTRY.build({
+            "type": cfg.lr_scheduler,
+            "optimizer": optimizer,
+            "warmup_steps": cfg.warmup_steps,
+            "total_steps": 1,
+        })
 
     logger = build_console_logger(cfg.out_dir, cfg.log_file, rank)
     if cfg.pretrained_ckpt and is_main_process(rank):
         logger.log({"ckpt": cfg.pretrained_ckpt, "strict": bool(cfg.pretrained_strict)}, phase="init")
 
-    trainer = FinetuneQM9Trainer(
+    trainer_cls = GotenNetQM9Trainer if cfg.encoder_type == "gotennet_l" else FinetuneQM9Trainer
+    trainer = trainer_cls(
         model=model,
         cfg=cfg,
         optimizer=optimizer,
         targets=targets,
-        scheduler=None,
+        scheduler=scheduler,
         logger=logger,
         distributed=distributed,
         rank=rank,

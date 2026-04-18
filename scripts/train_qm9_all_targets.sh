@@ -10,7 +10,8 @@ cd "${REPO_ROOT}"
 # ---------------------------
 NPROC_PER_NODE="${NPROC_PER_NODE:-8}"
 DATA_ROOT="${DATA_ROOT:-qm9_pyg}"
-SPLIT="${SPLIT:-egnn}"                # egnn | dimenet
+SPLIT="${SPLIT:-egnn}"                # egnn | dimenet | gotennet
+QM9_TARGET_VARIANT="${QM9_TARGET_VARIANT:-default}" # default | gotennet
 FORCE_RELOAD="${FORCE_RELOAD:-0}"     # 1=强制重新处理/下载 PyG QM9
 PRETRAINED_CKPT="${PRETRAINED_CKPT:-}"
 PRETRAINED_STRICT="${PRETRAINED_STRICT:-0}" # 1=加 --pretrained_strict
@@ -32,6 +33,12 @@ EGNN_FAST_LR="${EGNN_FAST_LR:-1e-3}"
 EGNN_FAST_TARGETS="${EGNN_FAST_TARGETS:-gap homo lumo}"
 BACKBONE_LR_SCALE="${BACKBONE_LR_SCALE:-0.1}"
 WEIGHT_DECAY="${WEIGHT_DECAY:-1e-6}"
+LR_SCHEDULER="${LR_SCHEDULER:-none}"
+WARMUP_STEPS="${WARMUP_STEPS:-0}"
+LR_FACTOR="${LR_FACTOR:-0.8}"
+LR_PATIENCE="${LR_PATIENCE:-15}"
+LR_MIN="${LR_MIN:-1e-7}"
+EARLY_STOPPING_PATIENCE="${EARLY_STOPPING_PATIENCE:-150}"
 GRAD_CLIP="${GRAD_CLIP:-1.0}"
 FREEZE_BACKBONE_EPOCHS="${FREEZE_BACKBONE_EPOCHS:-0}"
 
@@ -159,10 +166,13 @@ fi
 
 echo "Start sequential finetune for ${#TARGETS[@]} QM9 targets..."
 echo "data_root=${DATA_ROOT}, split=${SPLIT}, nproc=${NPROC_PER_NODE}"
+echo "qm9_target_variant=${QM9_TARGET_VARIANT}"
 echo "encoder_type=${ENCODER_TYPE}"
 echo "run_family=${RUN_FAMILY}"
 echo "batch_size=${BATCH_SIZE}, num_workers=${NUM_WORKERS}, epochs=${EPOCHS}"
 echo "backbone_lr=${BACKBONE_LR}, head_lr=${HEAD_LR}, wd=${WEIGHT_DECAY}"
+echo "lr_scheduler=${LR_SCHEDULER}, warmup_steps=${WARMUP_STEPS}"
+echo "lr_factor=${LR_FACTOR}, lr_patience=${LR_PATIENCE}, lr_min=${LR_MIN}, early_stopping_patience=${EARLY_STOPPING_PATIENCE}"
 echo "egnn_lr(base/fast)=${EGNN_BASE_LR}/${EGNN_FAST_LR}, fast_targets=[${EGNN_FAST_TARGETS}]"
 echo "backbone_lr_scale=${BACKBONE_LR_SCALE}"
 echo "dropout(path/act/attn/head)=${PATH_DROPOUT}/${ACTIVATION_DROPOUT}/${ATTN_DROPOUT}/${HEAD_DROPOUT}"
@@ -223,6 +233,7 @@ for target in "${TARGETS[@]}"; do
     torchrun --standalone --nproc_per_node="${NPROC_PER_NODE}" -m uni_react.train_finetune_qm9
     --data_root "${DATA_ROOT}"
     --split "${SPLIT}"
+    --qm9_target_variant "${QM9_TARGET_VARIANT}"
     --targets "${target}"
     --encoder_type "${ENCODER_TYPE}"
     --device "${DEVICE}"
@@ -234,6 +245,12 @@ for target in "${TARGETS[@]}"; do
     --backbone_lr "${effective_backbone_lr}"
     --head_lr "${effective_head_lr}"
     --weight_decay "${target_weight_decay}"
+    --lr_scheduler "${LR_SCHEDULER}"
+    --warmup_steps "${WARMUP_STEPS}"
+    --lr_factor "${LR_FACTOR}"
+    --lr_patience "${LR_PATIENCE}"
+    --lr_min "${LR_MIN}"
+    --early_stopping_patience "${EARLY_STOPPING_PATIENCE}"
     --grad_clip "${GRAD_CLIP}"
     --freeze_backbone_epochs "${FREEZE_BACKBONE_EPOCHS}"
     --emb_dim "${EMB_DIM}"

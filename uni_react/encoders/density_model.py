@@ -9,6 +9,7 @@ from .reacformer_se3 import ReacFormerSE3Encoder
 from .reacformer_so2 import ReacFormerSO2Encoder
 from .single_mol import SingleMolEncoder
 from .reacformer_hybrid import ReacFormerHybridEncoder
+from .gotennet_l import GotenNetLEncoder
 
 
 class QueryPointDensityHead(torch.nn.Module):
@@ -138,6 +139,18 @@ class DensityPretrainNet(torch.nn.Module):
             )
         elif encoder_type == "reacformer_hybrid":
             self.descriptor = ReacFormerHybridEncoder(
+                emb_dim=emb_dim,
+                num_layers=se3_layer,
+                heads=heads,
+                atom_vocab_size=atom_vocab_size,
+                cutoff=cutoff,
+                num_rbf=num_kernel,
+                path_dropout=path_dropout,
+                activation_dropout=activation_dropout,
+                attn_dropout=attn_dropout,
+            )
+        elif encoder_type == "gotennet_l":
+            self.descriptor = GotenNetLEncoder(
                 emb_dim=emb_dim,
                 num_layers=se3_layer,
                 heads=heads,

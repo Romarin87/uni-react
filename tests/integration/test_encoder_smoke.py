@@ -1,4 +1,5 @@
 """Smoke test: SingleMolEncoder forward pass."""
+import importlib.util
 import torch
 import pytest
 
@@ -65,3 +66,53 @@ def test_hybrid_qm9_encoder_forward():
     assert out["node_vec"].shape == (2, 5, 3, 32)
     assert out["node_tensor"].shape == (2, 5, 5, 32)
     assert out["graph_feats"].shape == (2, 32)
+
+
+def test_gotennet_l_encoder_forward():
+    if importlib.util.find_spec("torch_cluster") is None:
+        pytest.skip("gotennet_l requires torch_cluster")
+    from uni_react.encoders import GotenNetLEncoder
+
+    encoder = GotenNetLEncoder(
+        emb_dim=32,
+        num_layers=2,
+        heads=4,
+        atom_vocab_size=16,
+        cutoff=3.0,
+        num_rbf=16,
+    )
+    z = torch.randint(1, 8, (2, 5))
+    r = torch.randn(2, 5, 3)
+    with torch.no_grad():
+        out = encoder(z, r)
+    for key in ("node_feats", "node_vec", "node_tensor", "graph_feats", "coords_input", "atom_padding"):
+        assert key in out, f"missing key: {key}"
+    assert out["node_feats"].shape == (2, 5, 32)
+    assert out["node_vec"].shape == (2, 5, 3, 32)
+    assert out["node_tensor"].shape == (2, 5, 5, 32)
+    assert out["graph_feats"].shape == (2, 32)
+
+
+def test_gotennet_l_qm9_official_head_forward():
+    if importlib.util.find_spec("torch_cluster") is None:
+        pytest.skip("gotennet_l requires torch_cluster")
+    from uni_react.encoders.gotennet_qm9_model import GotenNetQM9Net, build_gotennet_qm9_metadata
+
+    model = GotenNetQM9Net(
+        emb_dim=32,
+        inv_layer=1,
+        se3_layer=2,
+        heads=4,
+        atom_vocab_size=16,
+        cutoff=3.0,
+        num_kernel=16,
+        target="gap",
+        metadata=build_gotennet_qm9_metadata(target="gap"),
+    )
+    z = torch.randint(1, 8, (2, 5))
+    r = torch.randn(2, 5, 3)
+    with torch.no_grad():
+        out = model(z, r)
+    assert "pred" in out
+    assert out["pred"].shape == (2,)
+    assert out["pred_is_normalized"] is False

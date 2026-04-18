@@ -13,6 +13,7 @@ ENCODER_TYPE="${ENCODER_TYPE:-}"
 
 if [[ -z "${ENCODER_TYPE}" && -n "${PRETRAINED_CKPT}" ]]; then
   case "${PRETRAINED_CKPT}" in
+    *gotennet_l*) ENCODER_TYPE="gotennet_l" ;;
     *reacformer_se3*) ENCODER_TYPE="reacformer_se3" ;;
     *reacformer_so2*) ENCODER_TYPE="reacformer_so2" ;;
     *) ENCODER_TYPE="single_mol" ;;
@@ -25,6 +26,7 @@ fi
 
 if [[ -z "${PRETRAINED_CKPT}" ]]; then
   case "${ENCODER_TYPE}" in
+    gotennet_l) PRETRAINED_CKPT="runs/gotennet_l_cdft/best.pt" ;;
     reacformer_se3) PRETRAINED_CKPT="runs/reacformer_se3_cdft/best.pt" ;;
     reacformer_so2) PRETRAINED_CKPT="runs/reacformer_so2_cdft/best.pt" ;;
     *) PRETRAINED_CKPT="runs/single_mol_cdft/best.pt" ;;

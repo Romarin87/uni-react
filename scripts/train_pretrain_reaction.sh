@@ -39,6 +39,7 @@ fi
 
 if [[ -z "${ENCODER_TYPE}" ]]; then
   case "${INIT_CKPT}" in
+    *gotennet_l*) ENCODER_TYPE="gotennet_l" ;;
     *reacformer_se3*) ENCODER_TYPE="reacformer_se3" ;;
     *reacformer_so2*) ENCODER_TYPE="reacformer_so2" ;;
     *) ENCODER_TYPE="single_mol" ;;
@@ -47,6 +48,7 @@ fi
 
 if [[ -z "${INIT_CKPT}" ]]; then
   case "${ENCODER_TYPE}" in
+    gotennet_l) INIT_CKPT="runs/gotennet_l_cdft/best.pt" ;;
     reacformer_se3) INIT_CKPT="runs/reacformer_se3_cdft/best.pt" ;;
     reacformer_so2) INIT_CKPT="runs/reacformer_so2_cdft/best.pt" ;;
     *) INIT_CKPT="runs/single_mol_cdft/best.pt" ;;

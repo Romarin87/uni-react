@@ -39,12 +39,32 @@ QM9_TARGET_INDEX = {
     "G": 15,
     "Cv": 11,
 }
-QM9_SPLIT_MODES = ("egnn", "dimenet")
+GOTENNET_QM9_TARGET_INDEX = {
+    "mu": 0,
+    "alpha": 1,
+    "homo": 2,
+    "lumo": 3,
+    "gap": 4,
+    "r2": 5,
+    "zpve": 6,
+    "U0": 7,
+    "U": 8,
+    "H": 9,
+    "G": 10,
+    "Cv": 11,
+}
+QM9_TARGET_INDEX_VARIANTS = {
+    "default": QM9_TARGET_INDEX,
+    "gotennet": GOTENNET_QM9_TARGET_INDEX,
+}
+QM9_SPLIT_MODES = ("egnn", "dimenet", "gotennet")
 QM9_SPLIT_SPECS = {
     # Common Cormorant / EGNN split.
     "egnn": {"seed": 0, "sizes": (100000, 17748, 13083)},
     # Common DimeNet / DimeNet++ split.
     "dimenet": {"seed": 0, "sizes": (110000, 10000, 10831)},
+    # Official GotenNet QM9 split.
+    "gotennet": {"seed": 1, "sizes": (110000, 10000, 10831)},
 }
 
 
@@ -62,6 +82,14 @@ def _resolve_targets(target: str, targets: Optional[Sequence[str]]) -> List[str]
     if bad:
         raise ValueError(f"Unsupported targets {bad}, available: {QM9_TARGETS}")
     return out
+
+
+def get_qm9_target_index_map(variant: str = "default") -> Dict[str, int]:
+    if variant not in QM9_TARGET_INDEX_VARIANTS:
+        raise ValueError(
+            f"Unsupported QM9 target index variant '{variant}', choose from {tuple(QM9_TARGET_INDEX_VARIANTS)}"
+        )
+    return QM9_TARGET_INDEX_VARIANTS[variant]
 
 
 # Module-level class so it can be pickled by multiprocessing DataLoader workers.
@@ -112,6 +140,26 @@ def load_pyg_qm9(root: str, force_reload: bool = False):
     return cls(root=str(Path(root)), force_reload=force_reload)
 
 
+def get_qm9_atomref(
+    root: str,
+    target: str,
+    max_z: int = 100,
+    force_reload: bool = False,
+    target_index_variant: str = "default",
+) -> Optional[torch.Tensor]:
+    base_dataset = load_pyg_qm9(root=root, force_reload=force_reload)
+    target_idx = get_qm9_target_index_map(target_index_variant)[target]
+    atomref = base_dataset.atomref(target_idx)
+    if atomref is None:
+        return None
+    if atomref.size(0) != max_z:
+        tmp = torch.zeros(max_z, 1, dtype=atomref.dtype)
+        idx = min(max_z, atomref.size(0))
+        tmp[:idx] = atomref[:idx]
+        return tmp
+    return atomref
+
+
 def build_qm9_split_indices(num_samples: int, split_mode: str) -> Dict[str, np.ndarray]:
     if split_mode not in QM9_SPLIT_MODES:
         raise ValueError(f"Unsupported split_mode '{split_mode}', choose from {QM9_SPLIT_MODES}")
@@ -143,6 +191,7 @@ class QM9PyGDataset(Dataset):
         indices: np.ndarray,
         target: str = "gap",
         targets: Optional[Sequence[str]] = None,
+        target_index_variant: str = "default",
         center_coords: bool = True,
         atom_vocab_size: Optional[int] = None,
     ) -> None:
@@ -153,8 +202,10 @@ class QM9PyGDataset(Dataset):
         self.indices = np.asarray(indices, dtype=np.int64)
         self.targets = tuple(resolved_targets)
         self.target = self.targets[0]
+        self.target_index_variant = target_index_variant
+        self.target_index_map = get_qm9_target_index_map(target_index_variant)
         self.target_indices = torch.as_tensor(
-            [QM9_TARGET_INDEX[name] for name in self.targets],
+            [self.target_index_map[name] for name in self.targets],
             dtype=torch.long,
         )
         self.num_targets = len(self.targets)
@@ -208,6 +259,7 @@ def build_qm9_pyg_splits(
     target: str = "gap",
     targets: Optional[Sequence[str]] = None,
     split_mode: str = "egnn",
+    target_index_variant: str = "default",
     center_coords: bool = True,
     atom_vocab_size: Optional[int] = None,
     force_reload: bool = False,
@@ -220,6 +272,7 @@ def build_qm9_pyg_splits(
             indices=indices,
             target=target,
             targets=targets,
+            target_index_variant=target_index_variant,
             center_coords=center_coords,
             atom_vocab_size=atom_vocab_size,
         )

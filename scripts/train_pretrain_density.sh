@@ -27,6 +27,7 @@ fi
 
 if [[ -z "${ENCODER_TYPE}" ]]; then
   case "${INIT_CKPT}" in
+    *gotennet_l*) ENCODER_TYPE="gotennet_l" ;;
     *reacformer_se3*) ENCODER_TYPE="reacformer_se3" ;;
     *reacformer_so2*) ENCODER_TYPE="reacformer_so2" ;;
     *) ENCODER_TYPE="single_mol" ;;

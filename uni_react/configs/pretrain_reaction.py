@@ -107,7 +107,7 @@ class ReactionPretrainConfig:
         if self.head_hidden_dim <= 0:
             raise ValueError(f"head_hidden_dim must be > 0, got {self.head_hidden_dim}")
 
-        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid"}
+        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
         if self.encoder_type not in valid_encoders:
             raise ValueError(
                 f"encoder_type must be one of {valid_encoders}, got {self.encoder_type!r}"

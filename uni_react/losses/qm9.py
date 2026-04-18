@@ -47,8 +47,9 @@ class QM9RegressionLoss:
         if pred_norm.ndim == 1:
             pred_norm = pred_norm.unsqueeze(-1)
         y = batch["y"]
+        pred_is_normalized = bool(outputs.get("pred_is_normalized", True))
 
-        if target_mean is not None and target_std is not None:
+        if pred_is_normalized and target_mean is not None and target_std is not None:
             mean = target_mean.unsqueeze(0)
             std = target_std.unsqueeze(0)
             y_norm = (y - mean) / std

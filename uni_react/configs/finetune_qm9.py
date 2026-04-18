@@ -13,6 +13,8 @@ class FinetuneQM9Config:
     data_root: str = "qm9_pyg"
     split: str = "egnn"
     """Dataset split strategy. See ``QM9_SPLIT_MODES`` in the dataset module."""
+    qm9_target_variant: str = "default"
+    """QM9 target column mapping variant. Use ``gotennet`` for official GotenNet QM9 targets."""
     force_reload: bool = False
     target: str = "gap"
     """Single-target shorthand; overridden when ``targets`` is non-empty."""
@@ -45,6 +47,12 @@ class FinetuneQM9Config:
     epochs: int = 100
     backbone_lr: float = 2e-5
     head_lr: float = 1e-3
+    lr_scheduler: str = "none"
+    warmup_steps: int = 0
+    lr_factor: float = 0.8
+    lr_patience: int = 15
+    lr_min: float = 1e-7
+    early_stopping_patience: int = 150
     weight_decay: float = 1e-2
     grad_clip: float = 1.0
     freeze_backbone_epochs: int = 0
@@ -96,7 +104,7 @@ class FinetuneQM9Config:
         if self.head_hidden_dim <= 0:
             raise ValueError(f"head_hidden_dim must be > 0, got {self.head_hidden_dim}")
 
-        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid"}
+        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
         if self.encoder_type not in valid_encoders:
             raise ValueError(
                 f"encoder_type must be one of {valid_encoders}, got {self.encoder_type!r}"
@@ -124,6 +132,28 @@ class FinetuneQM9Config:
         
         if self.head_lr <= 0:
             raise ValueError(f"head_lr must be > 0, got {self.head_lr}")
+
+        if self.lr_scheduler not in {"none", "cosine", "linear"}:
+            raise ValueError(
+                f"lr_scheduler must be one of {{'none', 'cosine', 'linear'}}, got {self.lr_scheduler!r}"
+            )
+
+        if self.warmup_steps < 0:
+            raise ValueError(f"warmup_steps must be >= 0, got {self.warmup_steps}")
+
+        if not 0.0 < self.lr_factor <= 1.0:
+            raise ValueError(f"lr_factor must be in (0, 1], got {self.lr_factor}")
+
+        if self.lr_patience < 0:
+            raise ValueError(f"lr_patience must be >= 0, got {self.lr_patience}")
+
+        if self.lr_min < 0:
+            raise ValueError(f"lr_min must be >= 0, got {self.lr_min}")
+
+        if self.early_stopping_patience < 0:
+            raise ValueError(
+                f"early_stopping_patience must be >= 0, got {self.early_stopping_patience}"
+            )
         
         if self.weight_decay < 0:
             raise ValueError(f"weight_decay must be >= 0, got {self.weight_decay}")
@@ -150,8 +180,14 @@ class FinetuneQM9Config:
             raise ValueError(f"seed must be >= 0, got {self.seed}")
         
         # Split validation
-        valid_splits = {"egnn", "dimenet"}
+        valid_splits = {"egnn", "dimenet", "gotennet"}
         if self.split not in valid_splits:
             raise ValueError(
                 f"split must be one of {valid_splits}, got {self.split!r}"
+            )
+
+        valid_target_variants = {"default", "gotennet"}
+        if self.qm9_target_variant not in valid_target_variants:
+            raise ValueError(
+                f"qm9_target_variant must be one of {valid_target_variants}, got {self.qm9_target_variant!r}"
             )

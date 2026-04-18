@@ -121,6 +121,7 @@ class FinetuneQM9Trainer(BaseTrainer):
             root=cfg.data_root,
             split_mode=cfg.split,
             targets=targets,
+            target_index_variant=cfg.qm9_target_variant,
             center_coords=not cfg.no_center_coords,
             force_reload=cfg.force_reload,
         )
@@ -143,6 +144,11 @@ class FinetuneQM9Trainer(BaseTrainer):
             dist.broadcast(stats, src=0)
         self.target_mean = stats[0].float()
         self.target_std = stats[1].float()
+        if hasattr(self.raw_model, "set_target_stats"):
+            self.raw_model.set_target_stats(
+                mean=self.target_mean.detach().clone(),
+                std=self.target_std.detach().clone(),
+            )
 
         # Data loaders
         train_sampler = (

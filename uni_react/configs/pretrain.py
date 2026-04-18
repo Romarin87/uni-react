@@ -45,7 +45,7 @@ class PretrainConfig:
     # Model architecture
     # ------------------------------------------------------------------
     encoder_type: str = "single_mol"
-    """Encoder type: single_mol, reacformer_se3, reacformer_so2, or reacformer_hybrid."""
+    """Encoder type: single_mol, reacformer_se3, reacformer_so2, reacformer_hybrid, or gotennet_l."""
     
     emb_dim: int = 256
     inv_layer: int = 2
@@ -132,6 +132,12 @@ class PretrainConfig:
         
         if self.num_kernel <= 0:
             raise ValueError(f"num_kernel must be > 0, got {self.num_kernel}")
+
+        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
+        if self.encoder_type not in valid_encoders:
+            raise ValueError(
+                f"encoder_type must be one of {valid_encoders}, got {self.encoder_type!r}"
+            )
         
         # Data augmentation validation
         if not 0.0 <= self.mask_ratio <= 1.0:
