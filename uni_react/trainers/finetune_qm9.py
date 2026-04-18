@@ -105,7 +105,7 @@ class FinetuneQM9Trainer(BaseTrainer):
             find_unused_parameters=bool(
                 distributed and (
                     cfg.freeze_backbone_epochs > 0
-                    or cfg.encoder_type in {"reacformer_se3", "reacformer_so2", "reacformer_hybrid"}
+                    or cfg.encoder_type in {"reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
                 )
             ),
             checkpoint_config=dataclasses.asdict(cfg),
