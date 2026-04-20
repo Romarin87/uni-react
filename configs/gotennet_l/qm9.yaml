@@ -19,7 +19,7 @@ no_center_coords: true
 model_name: gotennet_l
 emb_dim: 256
 inv_layer: 2
-se3_layer: 4
+se3_layer: 12
 heads: 8
 atom_vocab_size: 128
 cutoff: 5.0

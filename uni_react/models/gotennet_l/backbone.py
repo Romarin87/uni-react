@@ -62,8 +62,8 @@ def _unflatten_nodes(
 class GotenNetLEncoder(torch.nn.Module):
     """Original GotenNet architecture exposed as a uni_react backbone.
 
-    This uses the official GotenNet representation with the QM9-style settings
-    from the public repository: hidden size 256, four interaction blocks, and
+    This uses the official GotenNet representation with the paper's L-variant
+    defaults for model depth: hidden size 256, twelve interaction blocks, and
     lmax=2. The constructor keeps the public training knobs explicit, but the
     QM9-specific fixed settings are validated rather than silently remapped.
     """
@@ -71,7 +71,7 @@ class GotenNetLEncoder(torch.nn.Module):
     def __init__(
         self,
         emb_dim: int = 256,
-        num_layers: int = 4,
+        num_layers: int = 12,
         heads: int = 8,
         atom_vocab_size: int = 128,
         cutoff: float = 5.0,
@@ -102,8 +102,8 @@ class GotenNetLEncoder(torch.nn.Module):
             cutoff_fn=CosineCutoff(cutoff),
             activation="swish",
             max_z=max(atom_vocab_size, 100),
-            layernorm="layer",
-            steerable_norm="tensor",
+            layernorm="",
+            steerable_norm="",
             num_heads=heads,
             attn_dropout=attn_dropout,
             edge_updates=True,
