@@ -73,7 +73,7 @@ class FinetuneQM9Trainer(BaseTrainer):
             rank=rank,
             world_size=world_size,
             device=device,
-            find_unused_parameters=bool(distributed and (cfg.freeze_backbone_epochs > 0 or cfg.model_name == "gotennet_l")),
+            find_unused_parameters=bool(distributed and cfg.freeze_backbone_epochs > 0),
             checkpoint_config=dataclasses.asdict(cfg),
             save_optimizer=cfg.save_optimizer,
         )
@@ -203,3 +203,37 @@ class FinetuneQM9Trainer(BaseTrainer):
                     self.logger.log({k: float(v.item()) for k, v in losses.items()}, step=self.global_step, phase="train_batch")
 
         return self._reduce_bag(bag)
+
+    def _eval_loader_metrics(self, loader) -> Dict[str, float]:
+        self.model.eval()
+        bag = MetricBag(["loss", "mae"])
+        with torch.no_grad():
+            for batch in loader:
+                batch = move_batch_to_device(batch, self.device)
+                outputs = self.model(
+                    atomic_numbers=batch["atomic_numbers"],
+                    coords=batch["coords"],
+                    atom_padding=batch["atom_padding"],
+                )
+                losses = self.loss_fn(
+                    outputs,
+                    batch,
+                    target_mean=self.target_mean,
+                    target_std=self.target_std,
+                )
+                bs = batch["atomic_numbers"].shape[0]
+                bag.update_dict({k: float(v.item()) for k, v in losses.items()}, weight=bs)
+        return self._reduce_bag(bag)
+
+    def eval_epoch(self, epoch: int) -> Dict[str, float]:
+        del epoch
+        return self.eval_val()
+
+    def eval_train(self) -> Dict[str, float]:
+        return self._eval_loader_metrics(self._train_eval_loader)
+
+    def eval_val(self) -> Dict[str, float]:
+        return self._eval_loader_metrics(self._val_loader)
+
+    def eval_test(self) -> Dict[str, float]:
+        return self._eval_loader_metrics(self._test_loader)
