@@ -1,0 +1,40 @@
+# GotenNet-L - Geometric Structure Pretraining
+train_mode: geometric_structure
+train_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
+val_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
+batch_size: 512
+num_workers: 16
+mask_ratio: 0.15
+mask_token_id: 94
+min_masked: 1
+max_masked: 0
+noise_std: 0.1
+no_center_coords: false
+no_recenter_noisy: false
+model_name: gotennet_l
+emb_dim: 256
+inv_layer: 2
+se3_layer: 4
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 64
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+epochs: 20
+lr: 2.0e-4
+weight_decay: 1.0e-2
+grad_clip: 1.0
+warmup_steps: 1000
+lr_scheduler: cosine
+atom_weight: 1.0
+coord_weight: 1.0
+charge_weight: 1.0
+device: cuda
+seed: 42
+out_dir: runs/gotennet_l_geometric
+save_every: 1
+save_optimizer: true

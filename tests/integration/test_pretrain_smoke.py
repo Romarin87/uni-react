@@ -1,4 +1,4 @@
-"""Smoke test: build a tiny pretrain model and run one forward + loss pass."""
+"""Smoke test: build a tiny pretrain model through the explicit model/task path."""
 import pytest
 import torch
 
@@ -7,6 +7,7 @@ import torch
 def tiny_cfg():
     from uni_react.configs import PretrainConfig
     return PretrainConfig(
+        model_name="single_mol",
         emb_dim=32,
         inv_layer=1,
         se3_layer=1,
@@ -21,16 +22,12 @@ def tiny_cfg():
 
 @pytest.fixture
 def tiny_model(tiny_cfg):
-    from uni_react.encoders import SingleMolPretrainNet
-    return SingleMolPretrainNet(
-        emb_dim=tiny_cfg.emb_dim,
-        inv_layer=tiny_cfg.inv_layer,
-        se3_layer=tiny_cfg.se3_layer,
-        heads=tiny_cfg.heads,
-        atom_vocab_size=tiny_cfg.atom_vocab_size,
-        cutoff=tiny_cfg.cutoff,
-        num_kernel=tiny_cfg.num_kernel,
-    )
+    from uni_react.models import build_model_spec
+    from uni_react.tasks import build_geometric_model, resolve_geometric_task_spec
+
+    task_spec = resolve_geometric_task_spec(tiny_cfg)
+    model_spec = build_model_spec(tiny_cfg.model_name)
+    return build_geometric_model(tiny_cfg, model_spec, task_spec)
 
 
 @pytest.fixture
@@ -62,7 +59,7 @@ def test_forward_runs(tiny_model, tiny_batch):
 
 
 def test_geometric_loss(tiny_model, tiny_batch):
-    from uni_react.losses import GeometricStructureLoss
+    from uni_react.tasks.geometric.common import GeometricStructureLoss
     loss_fn = GeometricStructureLoss()
     tiny_model.eval()
     with torch.no_grad():
@@ -80,7 +77,7 @@ def test_geometric_loss(tiny_model, tiny_batch):
 
 
 def test_geometric_loss_uses_dataset_style_batch_keys(tiny_model):
-    from uni_react.losses import GeometricStructureLoss
+    from uni_react.tasks.geometric.common import GeometricStructureLoss
 
     torch.manual_seed(0)
     batch = {
@@ -110,7 +107,7 @@ def test_geometric_loss_uses_dataset_style_batch_keys(tiny_model):
 
 
 def test_backward_runs(tiny_model, tiny_batch):
-    from uni_react.losses import GeometricStructureLoss
+    from uni_react.tasks.geometric.common import GeometricStructureLoss
     loss_fn = GeometricStructureLoss()
     tiny_model.train()
     out = tiny_model(

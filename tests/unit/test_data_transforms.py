@@ -3,7 +3,12 @@ import pytest
 import torch
 import numpy as np
 
-from uni_react.data.transforms import AddGaussianNoise, CenterCoords, Compose, MaskAtoms
+from uni_react.tasks.geometric.common.transforms import (
+    AddGaussianNoise,
+    CenterCoords,
+    Compose,
+    MaskAtoms,
+)
 
 
 class TestCenterCoords:

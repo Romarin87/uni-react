@@ -20,18 +20,17 @@ num_workers: 16
 # ---------------------------------------------------------------------------
 # Data augmentation (minimal for density)
 # ---------------------------------------------------------------------------
-# Compatibility placeholders only. The density trainer currently ignores these
-# fields, but we keep them here so density configs stay shape-compatible with
-# the rest of the project config style.
+# Density pretraining keeps the same augmentation knobs in the config surface,
+# even though this recipe leaves them disabled.
 mask_ratio: 0.0
 noise_std: 0.0
 no_center_coords: false
 no_recenter_noisy: false
 
 # ---------------------------------------------------------------------------
-# Encoder type
+# Model
 # ---------------------------------------------------------------------------
-encoder_type: single_mol
+model_name: single_mol
 
 # ---------------------------------------------------------------------------
 # Model architecture - SingleMol
@@ -50,9 +49,7 @@ attn_dropout: 0.1
 # ---------------------------------------------------------------------------
 # Density prediction settings
 # ---------------------------------------------------------------------------
-# Compatibility placeholders only. These are accepted by the config schema for
-# forward compatibility, but the current density training loop does not consume
-# them directly.
+# Density-specific placeholder knobs kept explicit in the config surface.
 density_grid_size: 64   # Grid resolution for density prediction
 density_weight: 1.0
 
@@ -60,10 +57,10 @@ density_weight: 1.0
 # Optimisation
 # ---------------------------------------------------------------------------
 epochs: 20
-lr: 1.0e-4              # Compatibility only; actual training uses descriptor_lr/head_lr below
+lr: 1.0e-4              # The density trainer uses descriptor_lr/head_lr below.
 weight_decay: 1.0e-2
 grad_clip: 1.0
-warmup_steps: 1000      # Compatibility only; not used by current density scheduler
+warmup_steps: 1000      # Declared here for config symmetry; current density scheduler ignores it.
 lr_scheduler: cosine
 descriptor_lr: 2.0e-5
 head_lr: 2.0e-4
@@ -76,7 +73,7 @@ device: cuda
 seed: 42
 out_dir: runs/single_mol_density
 save_every: 5
-save_optimizer: true    # Compatibility only; optimizer state is still saved by trainer checkpoints
+save_optimizer: true
 log_interval: 100
 log_file: train.log
 center_coords: true

@@ -29,9 +29,9 @@ no_center_coords: false
 no_recenter_noisy: false
 
 # ---------------------------------------------------------------------------
-# Encoder type
+# Model
 # ---------------------------------------------------------------------------
-encoder_type: single_mol
+model_name: single_mol
 
 # ---------------------------------------------------------------------------
 # Model architecture - SingleMol

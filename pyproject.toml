@@ -43,8 +43,6 @@ uni-react-train-geometric = "uni_react.train_pretrain_geometric:main"
 uni-react-train-cdft = "uni_react.train_pretrain_cdft:main"
 uni-react-train-reaction = "uni_react.train_pretrain_reaction:main"
 uni-react-finetune-qm9 = "uni_react.train_finetune_qm9:main"
-uni-react-convert-ckpt = "uni_react.tools.convert_ckpt:main"
-uni-react-compare-qm9 = "uni_react.tools.compare_qm9_mae:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

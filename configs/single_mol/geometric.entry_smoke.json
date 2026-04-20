@@ -1,6 +1,6 @@
 {
   "train_mode": "geometric_structure",
-  "encoder_type": "single_mol",
+  "model_name": "single_mol",
   "train_h5": [
     "examples/output/geometric_h5/gdb13_example_shard_000000.h5"
   ],

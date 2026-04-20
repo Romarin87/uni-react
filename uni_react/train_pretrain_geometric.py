@@ -2,18 +2,11 @@
 """Geometric structure pretraining entry-point."""
 from __future__ import annotations
 
-import uni_react.encoders  # noqa: F401
-import uni_react.losses  # noqa: F401
-import uni_react.loggers  # noqa: F401
-import uni_react.schedulers  # noqa: F401
-from uni_react.training.pretrain_runner import run_pretrain_entry
+from uni_react.tasks.geometric import run_geometric_entry
 
 
 def main() -> None:
-    run_pretrain_entry(
-        train_mode="geometric_structure",
-        description="uni-react geometric pretraining",
-    )
+    run_geometric_entry()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 {
   "train_mode": "cdft",
-  "encoder_type": "single_mol",
+  "model_name": "single_mol",
   "train_h5": [
     "examples/output/electronic_h5/cdft_example_shard_000000.h5"
   ],

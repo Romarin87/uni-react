@@ -1,0 +1,51 @@
+# GotenNet-L - QM9 gap fine-tuning
+# Mirrors the official-style GotenNet QM9 recipe:
+# - gotennet split / target mapping
+# - no coordinate centering
+# - batch_size 32
+# - single lr 1e-4 with 10k-step warmup + plateau decay
+# - weight_decay 0.0
+# - grad_clip 5.0
+task_variant: gotennet
+data_root: qm9_pyg
+split: gotennet
+qm9_target_variant: gotennet
+targets:
+  - gap
+batch_size: 32
+num_workers: 16
+no_center_coords: true
+
+model_name: gotennet_l
+emb_dim: 256
+inv_layer: 2
+se3_layer: 4
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 64
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+head_hidden_dim: 256
+head_dropout: 0.1
+
+epochs: 1000
+backbone_lr: 1.0e-4
+head_lr: 1.0e-4
+lr_scheduler: none
+warmup_steps: 10000
+lr_factor: 0.8
+lr_patience: 15
+lr_min: 1.0e-7
+early_stopping_patience: 150
+weight_decay: 0.0
+grad_clip: 5.0
+freeze_backbone_epochs: 0
+
+device: cuda
+seed: 42
+out_dir: runs/qm9_scratch_gotennet_l_gotennet_gotennet_gap
+save_every: 10
+log_interval: 100
+save_optimizer: true

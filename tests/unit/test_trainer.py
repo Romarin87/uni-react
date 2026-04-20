@@ -25,7 +25,7 @@ class TestBaseTrainer:
     @pytest.fixture
     def trainer(self, simple_model, simple_optimizer, tmp_path):
         """Create a BaseTrainer instance for testing."""
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         
         return BaseTrainer(
             model=simple_model,
@@ -128,7 +128,7 @@ class TestBaseTrainer:
         model = nn.Linear(10, 10)
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         trainer = BaseTrainer(
             model=model,
             optimizer=optimizer,
@@ -152,7 +152,7 @@ class TestBaseTrainer:
         new_model = nn.Linear(10, 10)
         new_optimizer = torch.optim.Adam(new_model.parameters(), lr=1e-3)
         
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         new_trainer = BaseTrainer(
             model=new_model,
             optimizer=new_optimizer,
@@ -173,7 +173,7 @@ class TestBaseTrainer:
         model = nn.Linear(10, 10)
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         trainer = BaseTrainer(
             model=model,
             optimizer=optimizer,
@@ -196,9 +196,9 @@ class TestBaseTrainer:
 
     def test_reaction_trainer_respects_save_optimizer_flag(self, tmp_path):
         from uni_react.configs import ReactionPretrainConfig
-        from uni_react.encoders.reaction_model import ReactionPretrainNet
-        from uni_react.training.pretrain_builders import build_pretrain_encoder
-        from uni_react.trainers.pretrain_reaction import ReactionPretrainTrainer
+        from uni_react.tasks.reaction.common import ReactionPretrainNet
+        from uni_react.models import build_model_spec
+        from uni_react.tasks.reaction.common.trainer import ReactionPretrainTrainer
 
         h5_path = tmp_path / "reaction.h5"
         import h5py
@@ -235,7 +235,7 @@ class TestBaseTrainer:
             out_dir=str(tmp_path / "reaction_out"),
         )
         model = ReactionPretrainNet(
-            descriptor=build_pretrain_encoder(cfg),
+            descriptor=build_model_spec(cfg.model_name).build_backbone(cfg),
             emb_dim=cfg.emb_dim,
             head_hidden_dim=cfg.head_hidden_dim,
             teacher_momentum=cfg.teacher_momentum,
@@ -253,9 +253,9 @@ class TestBaseTrainer:
 
     def test_qm9_trainer_respects_save_optimizer_flag(self, monkeypatch, tmp_path):
         from uni_react.configs import FinetuneQM9Config
-        from uni_react.encoders import QM9FineTuneNet
-        from uni_react.training.pretrain_builders import build_pretrain_encoder
-        from uni_react.trainers.finetune_qm9 import FinetuneQM9Trainer
+        from uni_react.models import build_model_spec
+        from uni_react.tasks import build_qm9_model, resolve_qm9_task_spec
+        from uni_react.tasks.qm9.common.trainer import FinetuneQM9Trainer
 
         class TinyQM9Dataset(Dataset):
             def __init__(self, size: int = 4):
@@ -275,7 +275,7 @@ class TestBaseTrainer:
                 }
 
         monkeypatch.setattr(
-            "uni_react.trainers.finetune_qm9.build_qm9_pyg_splits",
+            "uni_react.tasks.qm9.common.trainer.build_qm9_pyg_splits",
             lambda **kwargs: {
                 "train": TinyQM9Dataset(size=4),
                 "valid": TinyQM9Dataset(size=2),
@@ -284,6 +284,7 @@ class TestBaseTrainer:
         )
 
         cfg = FinetuneQM9Config(
+            model_name="single_mol",
             batch_size=2,
             num_workers=0,
             epochs=1,
@@ -298,17 +299,12 @@ class TestBaseTrainer:
             head_hidden_dim=32,
             out_dir=str(tmp_path / "qm9_out"),
         )
-        model = QM9FineTuneNet(
-            emb_dim=cfg.emb_dim,
-            inv_layer=cfg.inv_layer,
-            se3_layer=cfg.se3_layer,
-            heads=cfg.heads,
-            atom_vocab_size=cfg.atom_vocab_size,
-            cutoff=cfg.cutoff,
-            num_kernel=cfg.num_kernel,
-            head_hidden_dim=cfg.head_hidden_dim,
-            num_targets=1,
-            descriptor=build_pretrain_encoder(cfg),
+        task_spec = resolve_qm9_task_spec(cfg)
+        model = build_qm9_model(
+            cfg,
+            build_model_spec(cfg.model_name),
+            ["gap"],
+            task_spec,
         )
         trainer = FinetuneQM9Trainer(
             model=model,
@@ -339,7 +335,7 @@ class TestBaseTrainer:
         
         new_optimizer = torch.optim.Adam(new_model.parameters())
         
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         new_trainer = BaseTrainer(
             model=new_model,
             optimizer=new_optimizer,
@@ -391,7 +387,7 @@ class TestBaseTrainer:
         new_optimizer = torch.optim.Adam(new_model.parameters(), lr=1e-3)
         new_scheduler = DummyScheduler()
 
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         new_trainer = BaseTrainer(
             model=new_model,
             optimizer=new_optimizer,
@@ -408,7 +404,7 @@ class TestBaseTrainer:
         model = nn.Linear(10, 10)
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-        from uni_react.trainers.base import BaseTrainer
+        from uni_react.training import BaseTrainer
         trainer = BaseTrainer(
             model=model,
             optimizer=optimizer,
@@ -443,7 +439,7 @@ class TestBaseTrainer:
     
     def test_reduce_bag_uses_public_methods(self, trainer):
         """Test that _reduce_bag uses public methods instead of private attributes."""
-        from uni_react.metrics import MetricBag
+        from uni_react.training import MetricBag
         
         bag = MetricBag(['loss', 'mae'])
         bag.update('loss', 1.0, weight=10)
@@ -458,7 +454,7 @@ class TestBaseTrainer:
     
     def test_reduce_bag_empty(self, trainer):
         """Test _reduce_bag with empty bag."""
-        from uni_react.metrics import MetricBag
+        from uni_react.training import MetricBag
         
         bag = MetricBag([])
         result = trainer._reduce_bag(bag)
@@ -623,7 +619,7 @@ class TestCheckpointUtils:
 
 class TestSchedulers:
     def test_cosine_scheduler_roundtrip_state(self):
-        from uni_react.schedulers.cosine import WarmupCosineScheduler
+        from uni_react.training.scheduler import WarmupCosineScheduler
 
         optimizer = torch.optim.Adam([torch.nn.Parameter(torch.ones(()))], lr=1e-3)
         scheduler = WarmupCosineScheduler(optimizer, warmup_steps=1, total_steps=4)
@@ -640,7 +636,7 @@ class TestSchedulers:
 
     def test_pretrain_trainer_updates_scheduler_total_steps(self, monkeypatch, tmp_path):
         from uni_react.configs import PretrainConfig
-        from uni_react.trainers.pretrain import PretrainTrainer
+        from uni_react.tasks.geometric.common.trainer import PretrainTrainer
 
         class DummyDataset(torch.utils.data.Dataset):
             def __len__(self):
@@ -678,7 +674,7 @@ class TestSchedulers:
                 return {"loss": self.proj.weight.sum().unsqueeze(0)}
 
         monkeypatch.setattr(
-            "uni_react.trainers.pretrain.build_pretrain_dataset",
+            "uni_react.tasks.geometric.common.trainer.build_pretrain_dataset",
             lambda *args, **kwargs: DummyDataset(),
         )
 
@@ -708,7 +704,7 @@ class TestSchedulers:
 
     def test_density_trainer_advances_distributed_sampler_epoch(self, tmp_path):
         from uni_react.configs import DensityPretrainConfig
-        from uni_react.trainers.pretrain_density import DensityPretrainTrainer
+        from uni_react.tasks.density.common.trainer import DensityPretrainTrainer
 
         class DummyDataset(torch.utils.data.Dataset):
             def __len__(self):
@@ -775,7 +771,7 @@ class TestSchedulers:
 
     def test_qm9_trainer_advances_distributed_sampler_epoch(self, monkeypatch, tmp_path):
         from uni_react.configs import FinetuneQM9Config
-        from uni_react.trainers.finetune_qm9 import FinetuneQM9Trainer
+        from uni_react.tasks.qm9.common.trainer import FinetuneQM9Trainer
 
         class DummyDataset(torch.utils.data.Dataset):
             def __len__(self):
@@ -817,10 +813,10 @@ class TestSchedulers:
                 return {"pred": pred.squeeze(-1)}
 
         monkeypatch.setattr(
-            "uni_react.trainers.finetune_qm9.build_qm9_pyg_splits",
+            "uni_react.tasks.qm9.common.trainer.build_qm9_pyg_splits",
             lambda **kwargs: {"train": DummyDataset(), "valid": DummyDataset(), "test": DummyDataset()},
         )
-        monkeypatch.setattr("uni_react.trainers.finetune_qm9.DistributedSampler", DummySampler)
+        monkeypatch.setattr("uni_react.tasks.qm9.common.trainer.DistributedSampler", DummySampler)
 
         cfg = FinetuneQM9Config(
             batch_size=2,

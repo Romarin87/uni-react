@@ -8,10 +8,10 @@ class DensityPretrainConfig:
     """All hyper-parameters for an electron-density pretraining run."""
 
     # ------------------------------------------------------------------
-    # Training mode / encoder
+    # Training mode / model
     # ------------------------------------------------------------------
     train_mode: str = "electron_density"
-    encoder_type: str = "single_mol"
+    model_name: str = "single_mol"
 
     # ------------------------------------------------------------------
     # Data
@@ -79,11 +79,10 @@ class DensityPretrainConfig:
     restart_ignore_config: bool = False
 
     def __post_init__(self) -> None:
-        if self.encoder_type not in {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}:
+        if self.model_name not in {"single_mol", "gotennet_l"}:
             raise ValueError(
-                "encoder_type must be one of "
-                "single_mol/reacformer_se3/reacformer_so2/reacformer_hybrid/gotennet_l, "
-                f"got {self.encoder_type!r}"
+                "model_name must be one of single_mol/gotennet_l, "
+                f"got {self.model_name!r}"
             )
         if self.batch_size <= 0:
             raise ValueError(f"batch_size must be > 0, got {self.batch_size}")

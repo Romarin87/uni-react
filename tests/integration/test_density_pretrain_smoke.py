@@ -1,4 +1,4 @@
-"""Smoke tests for electron-density pretraining (Stage-2 density).
+"""Smoke tests for density pretraining via the explicit model/task path.
 
 Uses the 10-sample HDF5 generated from examples/EDdata.
 Run after converting the data::
@@ -30,7 +30,7 @@ def ed_h5_path():
 
 @pytest.fixture(scope="module")
 def tiny_dataset(ed_h5_path):
-    from uni_react.train_pretrain_density import H5DensityPretrainDataset
+    from uni_react.tasks.density.common import H5DensityPretrainDataset
     return H5DensityPretrainDataset(
         h5_files=[ed_h5_path],
         num_query_points=64,
@@ -42,15 +42,19 @@ def tiny_dataset(ed_h5_path):
 
 @pytest.fixture(scope="module")
 def tiny_batch(tiny_dataset):
-    from uni_react.train_pretrain_density import collate_fn_density
+    from uni_react.tasks.density.common import collate_fn_density
     samples = [tiny_dataset[i] for i in range(min(4, len(tiny_dataset)))]
     return collate_fn_density(samples)
 
 
 @pytest.fixture(scope="module")
 def tiny_model():
-    from uni_react.train_pretrain_density import DensityPretrainNet
-    return DensityPretrainNet(
+    from uni_react.configs import DensityPretrainConfig
+    from uni_react.models import build_model_spec
+    from uni_react.tasks import build_density_model, resolve_density_task_spec
+
+    cfg = DensityPretrainConfig(
+        model_name="single_mol",
         emb_dim=32,
         inv_layer=1,
         se3_layer=1,
@@ -61,7 +65,10 @@ def tiny_model():
         point_hidden_dim=32,
         cond_hidden_dim=16,
         head_hidden_dim=64,
-    ).eval()
+    )
+    task_spec = resolve_density_task_spec(cfg)
+    model_spec = build_model_spec(cfg.model_name)
+    return build_density_model(cfg, model_spec, task_spec).eval()
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +104,7 @@ class TestH5DensityDataset:
         assert sample["density_target"].dtype == torch.float32
 
     def test_deterministic_reproducibility(self, ed_h5_path):
-        from uni_react.train_pretrain_density import H5DensityPretrainDataset
+        from uni_react.tasks.density.common import H5DensityPretrainDataset
         ds1 = H5DensityPretrainDataset([ed_h5_path], num_query_points=32,
                                         deterministic=True, seed=99)
         ds2 = H5DensityPretrainDataset([ed_h5_path], num_query_points=32,
@@ -108,7 +115,7 @@ class TestH5DensityDataset:
         assert torch.equal(s1["density_target"], s2["density_target"])
 
     def test_different_seeds_give_different_samples(self, ed_h5_path):
-        from uni_react.train_pretrain_density import H5DensityPretrainDataset
+        from uni_react.tasks.density.common import H5DensityPretrainDataset
         ds1 = H5DensityPretrainDataset([ed_h5_path], num_query_points=256,
                                         deterministic=True, seed=0)
         ds2 = H5DensityPretrainDataset([ed_h5_path], num_query_points=256,
@@ -150,7 +157,7 @@ class TestCollateDensity:
 
 class TestQueryPointDensityHead:
     def test_output_shape(self):
-        from uni_react.train_pretrain_density import QueryPointDensityHead
+        from uni_react.tasks.density.common import QueryPointDensityHead
         B, N, D, P = 2, 6, 32, 64
         head = QueryPointDensityHead(emb_dim=D, point_hidden_dim=32,
                                       cond_hidden_dim=16, head_hidden_dim=64)
@@ -168,7 +175,7 @@ class TestQueryPointDensityHead:
 
     def test_padding_affects_output(self):
         """Masking out atoms should change the prediction."""
-        from uni_react.train_pretrain_density import QueryPointDensityHead
+        from uni_react.tasks.density.common import QueryPointDensityHead
         B, N, D, P = 1, 8, 32, 16
         torch.manual_seed(0)
         head = QueryPointDensityHead(emb_dim=D, point_hidden_dim=16,
@@ -250,12 +257,20 @@ class TestDensityPretrainNet:
         """Save and reload a checkpoint; verify state dict matches."""
         ckpt_path = tmp_path / "density_test.pt"
         torch.save({"model": tiny_model.state_dict()}, ckpt_path)
-        from uni_react.train_pretrain_density import DensityPretrainNet
-        loaded = DensityPretrainNet(
+        from uni_react.configs import DensityPretrainConfig
+        from uni_react.models import build_model_spec
+        from uni_react.tasks import resolve_density_task_spec
+
+        cfg = DensityPretrainConfig(
+            model_name="single_mol",
             emb_dim=32, inv_layer=1, se3_layer=1, heads=4,
             atom_vocab_size=16, cutoff=3.0, num_kernel=16,
             point_hidden_dim=32, cond_hidden_dim=16, head_hidden_dim=64,
         )
+        from uni_react.tasks import build_density_model
+
+        model_spec = build_model_spec(cfg.model_name)
+        loaded = build_density_model(cfg, model_spec, resolve_density_task_spec(cfg))
         ckpt = torch.load(ckpt_path, map_location="cpu")
         loaded.load_state_dict(ckpt["model"], strict=True)
         for (n1, p1), (n2, p2) in zip(

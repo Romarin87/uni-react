@@ -8,16 +8,16 @@ python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction
 
 # Multi-GPU (torchrun)
 torchrun --nproc_per_node=8 -m uni_react.train_pretrain_reaction \
-    --config configs/reacformer_se3/reaction.yaml
+    --config configs/gotennet_l/reaction.yaml
 
 # CLI override
 python -m uni_react.train_pretrain_reaction \
-    --config configs/reacformer_so2/reaction.yaml \
+    --config configs/gotennet_l/reaction.yaml \
     --train_h5 /path/to/train.h5 --epochs 30
 """
 from __future__ import annotations
 
-from uni_react.training.reaction_runner import run_reaction_entry
+from uni_react.tasks.reaction import run_reaction_entry
 
 
 def main() -> None:

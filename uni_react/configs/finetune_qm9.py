@@ -7,6 +7,9 @@ from typing import List, Optional
 class FinetuneQM9Config:
     """All hyper-parameters for a QM9 fine-tuning run."""
 
+    task_name: str = "qm9"
+    task_variant: str = ""
+
     # ------------------------------------------------------------------
     # Data
     # ------------------------------------------------------------------
@@ -27,7 +30,7 @@ class FinetuneQM9Config:
     # ------------------------------------------------------------------
     # Model architecture
     # ------------------------------------------------------------------
-    encoder_type: str = "single_mol"
+    model_name: str = "single_mol"
     emb_dim: int = 256
     inv_layer: int = 2
     se3_layer: int = 4
@@ -104,10 +107,10 @@ class FinetuneQM9Config:
         if self.head_hidden_dim <= 0:
             raise ValueError(f"head_hidden_dim must be > 0, got {self.head_hidden_dim}")
 
-        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
-        if self.encoder_type not in valid_encoders:
+        valid_models = {"single_mol", "gotennet_l"}
+        if self.model_name not in valid_models:
             raise ValueError(
-                f"encoder_type must be one of {valid_encoders}, got {self.encoder_type!r}"
+                f"model_name must be one of {valid_models}, got {self.model_name!r}"
             )
         
         # Dropout validation
@@ -190,4 +193,10 @@ class FinetuneQM9Config:
         if self.qm9_target_variant not in valid_target_variants:
             raise ValueError(
                 f"qm9_target_variant must be one of {valid_target_variants}, got {self.qm9_target_variant!r}"
+            )
+
+        valid_task_variants = {"", "default", "gotennet"}
+        if self.task_variant not in valid_task_variants:
+            raise ValueError(
+                f"task_variant must be one of {valid_task_variants}, got {self.task_variant!r}"
             )

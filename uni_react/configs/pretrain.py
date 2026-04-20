@@ -15,7 +15,7 @@ class PretrainConfig:
     # Training mode
     # ------------------------------------------------------------------
     train_mode: str = "geometric_structure"
-    """One of ``geometric_structure``, ``cdft`` or legacy ``electronic_structure``."""
+    """One of ``geometric_structure``, ``electronic_structure`` or ``cdft``."""
 
     # ------------------------------------------------------------------
     # Data
@@ -44,8 +44,8 @@ class PretrainConfig:
     # ------------------------------------------------------------------
     # Model architecture
     # ------------------------------------------------------------------
-    encoder_type: str = "single_mol"
-    """Encoder type: single_mol, reacformer_se3, reacformer_so2, reacformer_hybrid, or gotennet_l."""
+    model_name: str = "single_mol"
+    """Model name: single_mol or gotennet_l."""
     
     emb_dim: int = 256
     inv_layer: int = 2
@@ -133,10 +133,10 @@ class PretrainConfig:
         if self.num_kernel <= 0:
             raise ValueError(f"num_kernel must be > 0, got {self.num_kernel}")
 
-        valid_encoders = {"single_mol", "reacformer_se3", "reacformer_so2", "reacformer_hybrid", "gotennet_l"}
-        if self.encoder_type not in valid_encoders:
+        valid_models = {"single_mol", "gotennet_l"}
+        if self.model_name not in valid_models:
             raise ValueError(
-                f"encoder_type must be one of {valid_encoders}, got {self.encoder_type!r}"
+                f"model_name must be one of {valid_models}, got {self.model_name!r}"
             )
         
         # Data augmentation validation

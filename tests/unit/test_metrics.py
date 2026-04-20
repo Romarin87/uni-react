@@ -1,56 +1,9 @@
-"""Unit tests for the metrics package."""
+"""Unit tests for shared and task-specific metrics."""
 import pytest
 import torch
 
-from uni_react.metrics import MetricBag, ScalarAccumulator, binary_accuracy, mae, rmse
-
-
-# ------------------------------------------------------------------
-# regression
-# ------------------------------------------------------------------
-
-class TestMAE:
-    def test_basic(self):
-        pred   = torch.tensor([1.0, 2.0, 3.0])
-        target = torch.tensor([2.0, 2.0, 5.0])
-        # |1-2|=1, |2-2|=0, |3-5|=2  →  mean = 1.0
-        result = mae(pred, target)
-        assert abs(float(result) - 1.0) < 1e-5
-
-    def test_with_mask(self):
-        pred   = torch.tensor([1.0, 2.0, 3.0])
-        target = torch.tensor([2.0, 2.0, 5.0])
-        mask   = torch.tensor([True, True, False])
-        result = mae(pred, target, mask=mask)
-        assert abs(float(result) - 0.5) < 1e-5
-
-    def test_perfect_prediction(self):
-        pred   = torch.tensor([1.0, 2.0, 3.0])
-        result = mae(pred, pred)
-        assert float(result) == 0.0
-
-    def test_reduction_sum(self):
-        pred   = torch.tensor([1.0, 3.0])
-        target = torch.tensor([0.0, 0.0])
-        result = mae(pred, target, reduction="sum")
-        assert abs(float(result) - 4.0) < 1e-5
-
-
-class TestRMSE:
-    def test_basic(self):
-        pred   = torch.tensor([0.0, 0.0])
-        target = torch.tensor([3.0, 4.0])
-        result = rmse(pred, target)
-        assert abs(float(result) - 3.5355) < 1e-3
-
-    def test_perfect(self):
-        pred = torch.tensor([1.0, 2.0])
-        assert float(rmse(pred, pred)) == 0.0
-
-
-# ------------------------------------------------------------------
-# classification
-# ------------------------------------------------------------------
+from uni_react.training import MetricBag, ScalarAccumulator
+from uni_react.tasks.reaction.common.metrics import binary_accuracy
 
 class TestBinaryAccuracy:
     def test_all_correct(self):

@@ -15,6 +15,7 @@ no_center_coords: false
 # ---------------------------------------------------------------------------
 # Model architecture  (must match pretrained checkpoint)
 # ---------------------------------------------------------------------------
+model_name: single_mol
 emb_dim: 256
 inv_layer: 2
 se3_layer: 4

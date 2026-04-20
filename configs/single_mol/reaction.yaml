@@ -13,7 +13,7 @@ num_workers: 16
 # ---------------------------------------------------------------------------
 # Model architecture - SingleMol
 # ---------------------------------------------------------------------------
-encoder_type: single_mol
+model_name: single_mol
 emb_dim: 256
 inv_layer: 2
 se3_layer: 4
