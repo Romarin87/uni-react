@@ -161,20 +161,23 @@ def _infer_qm9_run_family(cfg: FinetuneQM9Config) -> str:
         return "scratch"
     ckpt = cfg.pretrained_ckpt.lower()
     if "reaction" in ckpt:
-        return "pretrain_reaction"
+        return "finetune_from_reaction"
     if "density" in ckpt:
-        return "pretrain_density"
+        return "finetune_from_density"
     if "cdft" in ckpt or "electronic" in ckpt:
-        return "pretrain_cdft"
+        return "finetune_from_cdft"
     if "geometric" in ckpt:
-        return "pretrain_geometric"
+        return "finetune_from_geometric"
     ckpt_path = Path(cfg.pretrained_ckpt)
     source = (
         ckpt_path.parent.name
         if ckpt_path.stem in {"best", "latest"} or ckpt_path.stem.startswith("epoch_")
         else ckpt_path.stem
     )
-    return f"pretrain_{_sanitize_qm9_family_token(source)}"
+    source_token = _sanitize_qm9_family_token(source)
+    if source_token in {"pt", "pth", "ckpt", "best", "latest"}:
+        return "finetune"
+    return f"finetune_from_{source_token}"
 
 
 def _derive_qm9_out_dir(cfg: FinetuneQM9Config, targets: List[str]) -> str:
@@ -182,8 +185,7 @@ def _derive_qm9_out_dir(cfg: FinetuneQM9Config, targets: List[str]) -> str:
         return str(Path(cfg.restart).resolve().parent)
     run_family = _infer_qm9_run_family(cfg)
     target_tag = targets[0].lower() if len(targets) == 1 else "multi"
-    variant = cfg.task_variant or ("gotennet" if cfg.model_name == "gotennet_l" else "default")
-    return f"runs/qm9_{run_family}_{cfg.model_name}_{variant}_{cfg.split}_{target_tag}"
+    return f"runs/qm9_{run_family}_{cfg.model_name}_{target_tag}"
 
 
 def _load_best_model_for_qm9_test(trainer) -> None:

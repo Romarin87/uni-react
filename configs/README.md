@@ -21,7 +21,7 @@ configs/
 │   ├── cdft.yaml
 │   ├── density.yaml
 │   ├── reaction.yaml
-│   └── qm9_gap.yaml
+│   └── qm9.yaml
 ├── finetune_qm9_gap.yaml
 └── finetune_qm9_all.yaml
 ```
@@ -34,7 +34,7 @@ configs/
 - `reaction.yaml`: reaction triplet pretraining
 - `finetune_qm9_gap.yaml`: single-target QM9 fine-tuning
 - `finetune_qm9_all.yaml`: multi-target QM9 fine-tuning
-- `gotennet_l/qm9_gap.yaml`: GotenNet-L QM9 gap fine-tuning with the official-style split/head/optimizer recipe
+- `gotennet_l/qm9.yaml`: GotenNet-L QM9 fine-tuning with the official-style split/head/optimizer recipe
 
 ## Smoke Configs
 
@@ -48,5 +48,5 @@ python -m uni_react.train_pretrain_geometric --config configs/single_mol/geometr
 python -m uni_react.train_pretrain_cdft --config configs/gotennet_l/cdft.yaml
 python -m uni_react.train_pretrain_density --config configs/gotennet_l/density.yaml
 python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction.yaml
-python -m uni_react.train_finetune_qm9 --config configs/gotennet_l/qm9_gap.yaml
+python -m uni_react.train_finetune_qm9 --config configs/gotennet_l/qm9.yaml
 ```

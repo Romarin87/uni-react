@@ -6,7 +6,7 @@ Usage
 python -m uni_react.train_finetune_qm9 --config configs/finetune_qm9_gap.yaml
 
 torchrun --nproc_per_node=4 -m uni_react.train_finetune_qm9 \
-    --config configs/gotennet_l/qm9_gap.yaml --model_name gotennet_l
+    --config configs/gotennet_l/qm9.yaml --model_name gotennet_l
 """
 from __future__ import annotations
 

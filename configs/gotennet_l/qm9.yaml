@@ -45,7 +45,7 @@ freeze_backbone_epochs: 0
 
 device: cuda
 seed: 42
-out_dir: runs/qm9_scratch_gotennet_l_gotennet_gotennet_gap
+out_dir: ""
 save_every: 10
 log_interval: 100
 save_optimizer: true
