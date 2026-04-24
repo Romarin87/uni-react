@@ -61,7 +61,7 @@ def build_qm9_trainer(
     logger,
 ):
     model_spec = build_qm9_model_spec(cfg.model_name, task_spec.variant)
-    if cfg.model_name == "gotennet_l":
+    if cfg.model_name.startswith("gotennet_"):
         target_name = targets[0]
         atomref = None if target_name.lower() in {"mu", "r2"} else get_qm9_atomref(
             root=cfg.data_root,
@@ -86,7 +86,7 @@ def build_qm9_trainer(
 
     optimizer = _build_qm9_optimizer(cfg, model)
     scheduler = _build_qm9_scheduler(cfg, optimizer)
-    trainer_cls = GotenNetQM9Trainer if cfg.model_name == "gotennet_l" else FinetuneQM9Trainer
+    trainer_cls = GotenNetQM9Trainer if cfg.model_name.startswith("gotennet_") else FinetuneQM9Trainer
     return trainer_cls(
         model=model,
         cfg=cfg,
@@ -121,7 +121,7 @@ def finalize_qm9_training(
 
 
 def _build_qm9_optimizer(cfg: FinetuneQM9Config, model: torch.nn.Module) -> torch.optim.Optimizer:
-    if cfg.model_name == "gotennet_l":
+    if cfg.model_name.startswith("gotennet_"):
         return torch.optim.AdamW(
             [p for p in model.parameters() if p.requires_grad],
             lr=cfg.head_lr,

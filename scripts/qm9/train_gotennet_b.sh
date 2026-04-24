@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG="${CONFIG:-${ROOT_DIR}/configs/gotennet_l/qm9.yaml}"
+CONFIG="${CONFIG:-${ROOT_DIR}/configs/gotennet_b/qm9.yaml}"
 DATA_ROOT="${DATA_ROOT:-./data/qm9_pyg}"
 OUT_ROOT="${OUT_ROOT:-runs}"
 PRETRAINED_CKPT="${PRETRAINED_CKPT:-}"
@@ -66,8 +66,8 @@ fi
 echo "[INFO] Launch config: nnodes=${NNODES} node_rank=${NODE_RANK} nproc_per_node=${NPROC_PER_NODE} master=${MASTER_ADDR}:${MASTER_PORT}"
 
 for target in "${TARGETS[@]}"; do
-  out_dir="${OUT_ROOT}/qm9_${RUN_FAMILY}_gotennet_l_${target}"
-  echo "==> Training GotenNet-L on QM9 target: ${target}"
+  out_dir="${OUT_ROOT}/qm9_${RUN_FAMILY}_gotennet_b_${target}"
+  echo "==> Training GotenNet-B on QM9 target: ${target}"
   echo "    out_dir=${out_dir}"
   cmd=(
     torchrun
@@ -78,7 +78,7 @@ for target in "${TARGETS[@]}"; do
     --master_port="${MASTER_PORT}"
     -m uni_react.train_finetune_qm9
     --config "${CONFIG}"
-    --model_name gotennet_l
+    --model_name gotennet_b
     --data_root "${DATA_ROOT}"
     --targets "${target}"
     --out_dir "${out_dir}"

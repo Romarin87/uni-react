@@ -1,0 +1,43 @@
+# GotenNet-B_HAT - CDFT Pretraining
+train_mode: cdft
+train_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
+val_h5:
+  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
+batch_size: 128
+num_workers: 16
+mask_ratio: 0.0
+noise_std: 0.0
+no_center_coords: false
+no_recenter_noisy: false
+model_name: gotennet_b_hat
+emb_dim: 256
+inv_layer: 2
+se3_layer: 6
+heads: 8
+atom_vocab_size: 128
+cutoff: 5.0
+num_kernel: 64
+path_dropout: 0.1
+activation_dropout: 0.1
+attn_dropout: 0.1
+epochs: 20
+lr: 1.0e-4
+weight_decay: 1.0e-2
+grad_clip: 1.0
+warmup_steps: 1000
+lr_scheduler: cosine
+vip_vea_weight: 1.0
+fukui_weight: 1.0
+vip_vea_keys:
+  - vip
+  - vea
+fukui_keys:
+  - f_plus
+  - f_minus
+  - f_zero
+device: cuda
+seed: 42
+out_dir: runs/gotennet_b_hat_cdft
+save_every: 5
+save_optimizer: true

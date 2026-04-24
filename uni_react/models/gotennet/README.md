@@ -1,4 +1,4 @@
-# GotenNet-L Notes
+# GotenNet Notes
 
 This directory vendors the public GotenNet implementation and keeps a short
 record of how the paper's `S / B / L` variants map onto the exposed code knobs.
@@ -13,8 +13,8 @@ From the GotenNet paper appendix, the QM9 model depth variants are:
 
 In this codebase, that corresponds to:
 
-- `num_layers` in [backbone.py](/Users/bwli/Desktop/test/uni-react/uni_react/models/gotennet_l/backbone.py)
-- `se3_layer` in the task YAMLs under [configs/gotennet_l](/Users/bwli/Desktop/test/uni-react/configs/gotennet_l)
+- `num_layers` in [backbone.py](/Users/bwli/Desktop/test/uni-react/uni_react/models/gotennet/backbone.py)
+- `se3_layer` in the task YAMLs under [configs/gotennet_l](/Users/bwli/Desktop/test/uni-react/configs/gotennet_l), [configs/gotennet_b](/Users/bwli/Desktop/test/uni-react/configs/gotennet_b), and [configs/gotennet_s](/Users/bwli/Desktop/test/uni-react/configs/gotennet_s)
 
 ## Hat vs Non-Hat
 
@@ -96,11 +96,15 @@ turning them on.
 
 ## Current Repo Status
 
-At the moment, this repo has already been updated so that `gotennet_l` uses:
+At the moment, this repo exposes:
 
-- `12` interaction blocks
-- `layernorm=""`
-- `steerable_norm=""`
+- `gotennet_s`: 4 layers
+- `gotennet_b`: 6 layers
+- `gotennet_l`: 12 layers
+- `gotennet_s_hat`: 4 layers with `sep_dir=False`, `sep_tensor=False`
+- `gotennet_b_hat`: 6 layers with `sep_dir=False`, `sep_tensor=False`
+- `gotennet_l_hat`: 12 layers with `sep_dir=False`, `sep_tensor=False`
+- all variants use `layernorm=""` and `steerable_norm=""`
 
 So the current backbone is aligned with a non-hat 12-layer `GotenNetL`-style
 setting rather than the paper's shared-coefficient `GotenNetL^`.

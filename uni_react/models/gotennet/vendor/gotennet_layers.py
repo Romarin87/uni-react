@@ -873,7 +873,7 @@ class Distance(nn.Module):
     def forward(self, pos, batch):
         if radius_graph is None:
             raise ImportError(
-                "gotennet_l requires torch_cluster.radius_graph from the original "
+                "gotennet_* requires torch_cluster.radius_graph from the original "
                 "GotenNet dependency stack. Install torch-cluster to run this encoder; "
                 "fallback neighbor construction is intentionally disabled."
             )

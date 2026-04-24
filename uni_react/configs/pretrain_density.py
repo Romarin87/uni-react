@@ -79,9 +79,18 @@ class DensityPretrainConfig:
     restart_ignore_config: bool = False
 
     def __post_init__(self) -> None:
-        if self.model_name not in {"single_mol", "gotennet_l"}:
+        valid_models = {
+            "single_mol",
+            "gotennet_s",
+            "gotennet_b",
+            "gotennet_l",
+            "gotennet_s_hat",
+            "gotennet_b_hat",
+            "gotennet_l_hat",
+        }
+        if self.model_name not in valid_models:
             raise ValueError(
-                "model_name must be one of single_mol/gotennet_l, "
+                f"model_name must be one of {sorted(valid_models)}, "
                 f"got {self.model_name!r}"
             )
         if self.batch_size <= 0:

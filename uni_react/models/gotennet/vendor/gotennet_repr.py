@@ -1020,6 +1020,8 @@ class GotenNetWrapper(GotenNet):
     """
 
     def __init__(self, *args, max_num_neighbors=32, **kwargs):
+        self.sep_dir = kwargs.get("sep_dir", False)
+        self.sep_tensor = kwargs.get("sep_tensor", False)
         super(GotenNetWrapper, self).__init__(*args, **kwargs)
 
         self.distance = Distance(

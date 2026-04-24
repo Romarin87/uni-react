@@ -45,7 +45,7 @@ class PretrainConfig:
     # Model architecture
     # ------------------------------------------------------------------
     model_name: str = "single_mol"
-    """Model name: single_mol or gotennet_l."""
+    """Model name: single_mol or one of the GotenNet S/B/L variants."""
     
     emb_dim: int = 256
     inv_layer: int = 2
@@ -133,7 +133,15 @@ class PretrainConfig:
         if self.num_kernel <= 0:
             raise ValueError(f"num_kernel must be > 0, got {self.num_kernel}")
 
-        valid_models = {"single_mol", "gotennet_l"}
+        valid_models = {
+            "single_mol",
+            "gotennet_s",
+            "gotennet_b",
+            "gotennet_l",
+            "gotennet_s_hat",
+            "gotennet_b_hat",
+            "gotennet_l_hat",
+        }
         if self.model_name not in valid_models:
             raise ValueError(
                 f"model_name must be one of {valid_models}, got {self.model_name!r}"

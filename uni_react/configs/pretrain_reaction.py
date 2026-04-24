@@ -107,7 +107,15 @@ class ReactionPretrainConfig:
         if self.head_hidden_dim <= 0:
             raise ValueError(f"head_hidden_dim must be > 0, got {self.head_hidden_dim}")
 
-        valid_models = {"single_mol", "gotennet_l"}
+        valid_models = {
+            "single_mol",
+            "gotennet_s",
+            "gotennet_b",
+            "gotennet_l",
+            "gotennet_s_hat",
+            "gotennet_b_hat",
+            "gotennet_l_hat",
+        }
         if self.model_name not in valid_models:
             raise ValueError(
                 f"model_name must be one of {valid_models}, got {self.model_name!r}"

@@ -1,9 +1,14 @@
 # Configurations
 
-This directory only keeps configs for the two retained models:
+This directory keeps configs for the retained model families:
 
 - `single_mol`
+- `gotennet_s`
+- `gotennet_b`
 - `gotennet_l`
+- `gotennet_s_hat`
+- `gotennet_b_hat`
+- `gotennet_l_hat`
 
 ## Layout
 
@@ -16,12 +21,12 @@ configs/
 │   ├── cdft.entry_smoke.json
 │   ├── density.yaml
 │   └── reaction.yaml
+├── gotennet_s/
+├── gotennet_b/
 ├── gotennet_l/
-│   ├── geometric.yaml
-│   ├── cdft.yaml
-│   ├── density.yaml
-│   ├── reaction.yaml
-│   └── qm9.yaml
+├── gotennet_s_hat/
+├── gotennet_b_hat/
+└── gotennet_l_hat/
 ├── finetune_qm9_gap.yaml
 └── finetune_qm9_all.yaml
 ```
@@ -34,7 +39,7 @@ configs/
 - `reaction.yaml`: reaction triplet pretraining
 - `finetune_qm9_gap.yaml`: single-target QM9 fine-tuning
 - `finetune_qm9_all.yaml`: multi-target QM9 fine-tuning
-- `gotennet_l/qm9.yaml`: GotenNet-L QM9 fine-tuning with the official-style split/head/optimizer recipe
+- `gotennet_*/qm9.yaml`: GotenNet S/B/L (and hat) QM9 fine-tuning with the official-style split/head/optimizer recipe
 
 ## Smoke Configs
 
@@ -45,7 +50,7 @@ configs/
 
 ```bash
 python -m uni_react.train_pretrain_geometric --config configs/single_mol/geometric.yaml
-python -m uni_react.train_pretrain_cdft --config configs/gotennet_l/cdft.yaml
+python -m uni_react.train_pretrain_cdft --config configs/gotennet_b/cdft.yaml
 python -m uni_react.train_pretrain_density --config configs/gotennet_l/density.yaml
 python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction.yaml
 python -m uni_react.train_finetune_qm9 --config configs/gotennet_l/qm9.yaml

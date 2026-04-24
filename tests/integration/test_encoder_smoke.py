@@ -48,7 +48,7 @@ def test_padding_mask_respected(encoder):
 def test_gotennet_l_encoder_forward():
     if importlib.util.find_spec("torch_cluster") is None:
         pytest.skip("gotennet_l requires torch_cluster")
-    from uni_react.models.gotennet_l import GotenNetLEncoder
+    from uni_react.models.gotennet import GotenNetLEncoder
 
     encoder = GotenNetLEncoder(
         emb_dim=32,
@@ -74,7 +74,7 @@ def test_gotennet_l_qm9_official_head_forward():
     if importlib.util.find_spec("torch_cluster") is None:
         pytest.skip("gotennet_l requires torch_cluster")
     from uni_react.tasks.qm9.gotennet_l import GotenNetQM9Net, build_gotennet_qm9_metadata
-    from uni_react.models.gotennet_l import GotenNetLEncoder
+    from uni_react.models.gotennet import GotenNetLEncoder
 
     model = GotenNetQM9Net(
         descriptor=GotenNetLEncoder(

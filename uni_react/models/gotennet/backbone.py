@@ -1,4 +1,4 @@
-"""GotenNet-L encoder adapted to the explicit uni_react model interface."""
+"""Shared GotenNet encoder adapted to the explicit uni_react model interface."""
 
 from __future__ import annotations
 
@@ -62,10 +62,9 @@ def _unflatten_nodes(
 class GotenNetLEncoder(torch.nn.Module):
     """Original GotenNet architecture exposed as a uni_react backbone.
 
-    This uses the official GotenNet representation with the paper's L-variant
-    defaults for model depth: hidden size 256, twelve interaction blocks, and
-    lmax=2. The constructor keeps the public training knobs explicit, but the
-    QM9-specific fixed settings are validated rather than silently remapped.
+    The S/B/L depth variant is provided by the caller through ``num_layers``.
+    Shared settings follow the public QM9 checkpoints: hidden size 256, lmax=2,
+    and non-hat coefficient separation (``sep_dir=True``, ``sep_tensor=True``).
     """
 
     def __init__(
@@ -79,16 +78,18 @@ class GotenNetLEncoder(torch.nn.Module):
         path_dropout: float = 0.1,
         activation_dropout: float = 0.1,
         attn_dropout: float = 0.1,
+        sep_dir: bool = True,
+        sep_tensor: bool = True,
     ) -> None:
         super().__init__()
         if path_dropout != 0.1:
             raise ValueError(
-                "gotennet_l does not support path_dropout; keep the official fixed setting "
+                "gotennet_* variants do not support path_dropout; keep the official fixed setting "
                 f"(expected 0.1 placeholder, got {path_dropout})."
             )
         if activation_dropout != 0.1:
             raise ValueError(
-                "gotennet_l does not support activation_dropout; keep the official fixed setting "
+                "gotennet_* variants do not support activation_dropout; keep the official fixed setting "
                 f"(expected 0.1 placeholder, got {activation_dropout})."
             )
         self.emb_dim = emb_dim
@@ -111,8 +112,8 @@ class GotenNetLEncoder(torch.nn.Module):
             lmax=self.lmax,
             aggr="add",
             sep_htr=True,
-            sep_dir=True,
-            sep_tensor=True,
+            sep_dir=sep_dir,
+            sep_tensor=sep_tensor,
             edge_ln="",
             max_num_neighbors=32,
         )

@@ -124,9 +124,20 @@ class TestEntrypointUtils:
         assert written.exists()
 
 
-def test_gotennet_l_qm9_model_is_valid_in_configs():
-    cfg = FinetuneQM9Config(model_name="gotennet_l")
-    assert cfg.model_name == "gotennet_l"
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "gotennet_s",
+        "gotennet_b",
+        "gotennet_l",
+        "gotennet_s_hat",
+        "gotennet_b_hat",
+        "gotennet_l_hat",
+    ],
+)
+def test_gotennet_qm9_models_are_valid_in_configs(model_name):
+    cfg = FinetuneQM9Config(model_name=model_name)
+    assert cfg.model_name == model_name
 
 
 def test_gotennet_qm9_split_and_target_variant_are_valid_in_configs():
@@ -160,8 +171,9 @@ def test_qm9_task_variant_defaults_to_default_for_non_gotennet():
     assert spec.target_index_variant == "default"
 
 
-def test_qm9_task_variant_defaults_to_gotennet_for_gotennet_l():
-    cfg = FinetuneQM9Config(model_name="gotennet_l")
+@pytest.mark.parametrize("model_name", ["gotennet_s", "gotennet_b", "gotennet_l", "gotennet_s_hat", "gotennet_b_hat", "gotennet_l_hat"])
+def test_qm9_task_variant_defaults_to_gotennet_for_gotennet_variants(model_name):
+    cfg = FinetuneQM9Config(model_name=model_name)
     spec = resolve_qm9_task_spec(cfg)
     assert spec.variant == "gotennet"
     assert spec.split == "gotennet"
@@ -172,6 +184,13 @@ def test_qm9_task_variant_defaults_to_gotennet_for_gotennet_l():
 def test_qm9_model_spec_rejects_unsupported_variant():
     with pytest.raises(ValueError, match="does not support QM9 variant"):
         build_qm9_model_spec("gotennet_l", "default")
+
+
+@pytest.mark.parametrize("model_name", ["gotennet_s", "gotennet_b", "gotennet_l", "gotennet_s_hat", "gotennet_b_hat", "gotennet_l_hat"])
+def test_qm9_model_spec_accepts_gotennet_variants(model_name):
+    spec = build_qm9_model_spec(model_name, "gotennet")
+    assert spec.name == model_name
+    assert callable(spec.build_backbone)
 
 
 def test_qm9_model_spec_accepts_single_mol_default_variant():

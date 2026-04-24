@@ -10,6 +10,9 @@ python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction
 torchrun --nproc_per_node=8 -m uni_react.train_pretrain_reaction \
     --config configs/gotennet_l/reaction.yaml
 
+torchrun --nproc_per_node=8 -m uni_react.train_pretrain_reaction \
+    --config configs/gotennet_b_hat/reaction.yaml
+
 # CLI override
 python -m uni_react.train_pretrain_reaction \
     --config configs/gotennet_l/reaction.yaml \

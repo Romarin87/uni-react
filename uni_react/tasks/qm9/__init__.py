@@ -10,7 +10,7 @@ from .spec import QM9TaskSpec, resolve_qm9_task_spec
 
 
 def build_qm9_model(cfg, model_spec, targets, task_spec, **kwargs):
-    if cfg.model_name == "gotennet_l":
+    if cfg.model_name.startswith("gotennet_"):
         return build_gotennet_l_qm9_model(cfg, model_spec, targets, task_spec, **kwargs)
     return build_common_qm9_model(cfg, model_spec, targets, task_spec, **kwargs)
 

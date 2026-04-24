@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 import torch
 
-from ....models.gotennet_l.vendor.outputs import Atomwise, Dipole, ElectronicSpatialExtentV2
+from ....models.gotennet.vendor.outputs import Atomwise, Dipole, ElectronicSpatialExtentV2
 from ..dataset import QM9_TARGETS
 
 

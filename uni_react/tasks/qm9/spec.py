@@ -15,7 +15,7 @@ class QM9TaskSpec:
 
 
 def resolve_qm9_task_spec(cfg) -> QM9TaskSpec:
-    variant = cfg.task_variant or ("gotennet" if cfg.model_name == "gotennet_l" else "default")
+    variant = cfg.task_variant or ("gotennet" if cfg.model_name.startswith("gotennet_") else "default")
     if variant == "gotennet":
         if cfg.task_variant:
             split = cfg.split or "gotennet"
