@@ -1,6 +1,6 @@
 # GotenNet-B_HAT - Reaction Triplet Pretraining
-train_h5: /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/React/RGD1_react.h5
-val_h5: /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/React/t1x_react.h5
+train_h5: /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/React/RGD1_react.h5
+val_h5: /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/React/t1x_react.h5
 batch_size: 64
 num_workers: 16
 model_name: gotennet_b_hat

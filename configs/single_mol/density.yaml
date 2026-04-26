@@ -11,9 +11,9 @@ train_mode: electron_density
 # Data
 # ---------------------------------------------------------------------------
 train_h5:
-  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/EDBench/density_h5_train/*.h5
+  - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/EDBench/density_h5_train/*.h5
 val_h5:
-  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/EDBench/density_h5_val/*.h5
+  - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/EDBench/density_h5_val/*.h5
 batch_size: 64          # Smaller batch for density prediction
 num_workers: 16
 

@@ -28,13 +28,19 @@ def run_reaction_entry() -> None:
         parser.error("--train_h5 is required (or set train_h5 in config file).")
 
     distributed, rank, world_size, local_rank, device = init_distributed(cfg.device)
-    del local_rank
     set_seed(cfg.seed + rank)
 
-    if is_main_process(rank):
-        dump_runtime_config(cfg, cfg.out_dir)
-
     logger = build_console_logger(cfg.out_dir, cfg.log_file, rank)
+    runtime = {
+        "distributed": bool(distributed),
+        "world_size": int(world_size),
+        "rank": int(rank),
+        "local_rank": int(local_rank),
+    }
+    if is_main_process(rank):
+        dump_runtime_config(cfg, cfg.out_dir, runtime=runtime)
+        logger.log_metrics("init", runtime)
+
     trainer = build_reaction_trainer(
         cfg,
         task_spec,

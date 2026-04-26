@@ -24,13 +24,18 @@ def run_qm9_entry() -> None:
     cfg, task_spec, targets = prepare_qm9_config(cfg)
 
     distributed, rank, world_size, local_rank, device = init_distributed(cfg.device)
-    del local_rank
     set_seed(cfg.seed + rank)
 
-    if is_main_process(rank):
-        dump_runtime_config(cfg, cfg.out_dir)
-
     logger = build_event_logger(cfg.out_dir, cfg.log_file, rank)
+    runtime = {
+        "distributed": bool(distributed),
+        "world_size": int(world_size),
+        "rank": int(rank),
+        "local_rank": int(local_rank),
+    }
+    if is_main_process(rank):
+        dump_runtime_config(cfg, cfg.out_dir, runtime=runtime)
+        logger.log_metrics("init", runtime)
     if cfg.pretrained_ckpt and is_main_process(rank):
         logger.log_metrics("init", {"ckpt": cfg.pretrained_ckpt, "strict": bool(cfg.pretrained_strict)})
 

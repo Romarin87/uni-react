@@ -28,15 +28,21 @@ def run_density_entry() -> None:
     task_spec = resolve_density_task_spec(cfg)
 
     distributed, rank, world_size, local_rank, device = init_distributed(cfg.device)
-    del local_rank
     set_seed(cfg.seed + rank)
 
     out_dir = Path(cfg.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     logger = build_console_logger(out_dir, cfg.log_file, rank)
+    runtime = {
+        "distributed": bool(distributed),
+        "world_size": int(world_size),
+        "rank": int(rank),
+        "local_rank": int(local_rank),
+    }
 
     if is_main_process(rank):
-        dump_runtime_config(cfg, out_dir)
+        dump_runtime_config(cfg, out_dir, runtime=runtime)
+        logger.log_metrics("init", runtime)
         logger.log_config(dataclasses.asdict(cfg))
 
     trainer = build_density_trainer(

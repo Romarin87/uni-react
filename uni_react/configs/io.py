@@ -54,6 +54,13 @@ def load_config(path: str, schema: Type[T]) -> T:
     return _build(raw, schema)
 
 
+def _config_payload(cfg: Any, runtime: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    data = dataclasses.asdict(cfg) if dataclasses.is_dataclass(cfg) else dict(cfg)
+    if runtime is not None:
+        data["runtime"] = dict(runtime)
+    return data
+
+
 def dump_config(cfg: Any, path: str) -> None:
     """Serialise a config dataclass to YAML or JSON.
 
@@ -65,7 +72,7 @@ def dump_config(cfg: Any, path: str) -> None:
     """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    data = dataclasses.asdict(cfg)
+    data = _config_payload(cfg)
 
     if p.suffix in (".yaml", ".yml"):
         if not _HAS_YAML:
@@ -201,15 +208,21 @@ def build_console_logger(out_dir: str | Path, log_file: str, rank: int):
     return build_event_logger(out_dir, log_file, rank)
 
 
-def dump_runtime_config(cfg: Any, out_dir: str | Path) -> Path:
+def dump_runtime_config(
+    cfg: Any,
+    out_dir: str | Path,
+    runtime: Optional[Dict[str, Any]] = None,
+) -> Path:
     out_dir = Path(out_dir)
+    data = _config_payload(cfg, runtime)
+    json_path = out_dir / "config.json"
+    dump_config(data, str(json_path))
+
     yaml_path = out_dir / "config.yaml"
     try:
-        dump_config(cfg, str(yaml_path))
+        dump_config(data, str(yaml_path))
         return yaml_path
     except ImportError:
-        json_path = out_dir / "config.json"
-        dump_config(cfg, str(json_path))
         return json_path
 
 

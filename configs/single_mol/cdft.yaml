@@ -11,9 +11,9 @@ train_mode: cdft
 # Data
 # ---------------------------------------------------------------------------
 train_h5:
-  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
+  - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
 val_h5:
-  - /inspire/qb-ilm/project/chemicalreaction/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
+  - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
 batch_size: 128
 num_workers: 16
 
