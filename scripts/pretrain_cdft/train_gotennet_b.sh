@@ -4,5 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CONFIG="${CONFIG:-${ROOT_DIR}/configs/gotennet_b/cdft.yaml}"
+source "${ROOT_DIR}/scripts/common_torchrun.sh"
 
-exec python -m uni_react.train_pretrain_cdft --config "${CONFIG}" "$@"
+run_torch_module uni_react.train_pretrain_cdft --config "${CONFIG}" "$@"
