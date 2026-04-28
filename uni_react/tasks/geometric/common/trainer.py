@@ -1,6 +1,7 @@
 """Shared trainer for geometric and CDFT pretraining."""
 
 import dataclasses
+import json
 from typing import Any, Dict, Optional
 
 import torch
@@ -123,6 +124,144 @@ class PretrainTrainer(BaseTrainer):
                 steps_per_epoch = min(steps_per_epoch, cfg.smoke_train_batch_limit)
             self.scheduler.set_total_steps(max(1, cfg.epochs * steps_per_epoch))
 
+    @staticmethod
+    def _finite_summary(tensor: torch.Tensor) -> Dict[str, Any]:
+        data = tensor.detach()
+        summary: Dict[str, Any] = {
+            "shape": tuple(data.shape),
+            "dtype": str(data.dtype),
+            "device": str(data.device),
+        }
+        if data.numel() == 0:
+            summary.update({"numel": 0, "finite": True})
+            return summary
+
+        if torch.is_floating_point(data) or torch.is_complex(data):
+            finite = torch.isfinite(data)
+            summary.update(
+                {
+                    "numel": int(data.numel()),
+                    "finite_count": int(finite.sum().item()),
+                    "nan_count": int(torch.isnan(data).sum().item()),
+                    "posinf_count": int(torch.isposinf(data).sum().item()),
+                    "neginf_count": int(torch.isneginf(data).sum().item()),
+                    "finite": bool(finite.all().item()),
+                }
+            )
+            finite_data = data[finite]
+            if finite_data.numel() > 0:
+                finite_float = finite_data.float()
+                summary.update(
+                    {
+                        "min": float(finite_float.min().item()),
+                        "max": float(finite_float.max().item()),
+                        "mean": float(finite_float.mean().item()),
+                    }
+                )
+            return summary
+
+        summary.update(
+            {
+                "numel": int(data.numel()),
+                "finite": True,
+                "min": int(data.min().item()),
+                "max": int(data.max().item()),
+            }
+        )
+        return summary
+
+    @staticmethod
+    def _batch_summary(batch: Dict[str, Any]) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {}
+
+        atom_padding = batch.get("atom_padding")
+        if isinstance(atom_padding, torch.Tensor):
+            atoms_per_mol = (~atom_padding).sum(dim=1)
+            summary["atoms_per_mol"] = {
+                "min": int(atoms_per_mol.min().item()),
+                "max": int(atoms_per_mol.max().item()),
+                "mean": float(atoms_per_mol.float().mean().item()),
+            }
+
+        mask_positions = batch.get("mask_positions", batch.get("mask"))
+        if isinstance(mask_positions, torch.Tensor) and mask_positions.ndim >= 2:
+            masked_per_mol = mask_positions.sum(dim=1)
+            summary["masked_per_mol"] = {
+                "min": int(masked_per_mol.min().item()),
+                "max": int(masked_per_mol.max().item()),
+                "mean": float(masked_per_mol.float().mean().item()),
+            }
+
+        for name in ("atomic_numbers", "input_atomic_numbers", "coords", "coords_noisy", "charges", "charge_valid"):
+            value = batch.get(name)
+            if isinstance(value, torch.Tensor):
+                summary[name] = PretrainTrainer._finite_summary(value)
+
+        return summary
+
+    def _log_nonfinite(
+        self,
+        *,
+        where: str,
+        epoch: int,
+        step_in_epoch: int,
+        batch: Dict[str, Any],
+        tensors: Dict[str, Any],
+    ) -> None:
+        payload: Dict[str, Any] = {
+            "where": where,
+            "epoch": epoch,
+            "global_step": self.global_step + 1,
+            "step_in_epoch": step_in_epoch,
+            "rank": self.rank,
+            "world_size": self.world_size,
+            "batch": self._batch_summary(batch),
+            "tensors": {},
+        }
+        for name, value in tensors.items():
+            if isinstance(value, torch.Tensor):
+                payload["tensors"][name] = self._finite_summary(value)
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        nonfinite_path = self.out_dir / f"nonfinite_rank{self.rank}.jsonl"
+        with nonfinite_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+        print("[nonfinite] " + json.dumps(payload, ensure_ascii=False, default=str), flush=True)
+        if self.logger is not None:
+            self.logger.log(payload, step=self.global_step + 1, phase="nonfinite")
+
+    def _check_finite(
+        self,
+        *,
+        where: str,
+        epoch: int,
+        step_in_epoch: int,
+        batch: Dict[str, Any],
+        tensors: Dict[str, Any],
+    ) -> None:
+        bad = {
+            name: value
+            for name, value in tensors.items()
+            if isinstance(value, torch.Tensor)
+            and (torch.is_floating_point(value) or torch.is_complex(value))
+            and value.numel() > 0
+            and not torch.isfinite(value.detach()).all().item()
+        }
+        if not bad:
+            return
+        self._log_nonfinite(
+            where=where,
+            epoch=epoch,
+            step_in_epoch=step_in_epoch,
+            batch=batch,
+            tensors=bad,
+        )
+        names = ", ".join(sorted(bad))
+        raise RuntimeError(
+            f"Non-finite tensor(s) detected at {where}: {names}; "
+            f"epoch={epoch} global_step={self.global_step + 1} "
+            f"step_in_epoch={step_in_epoch} rank={self.rank}"
+        )
+
     def train_epoch(self, epoch: int) -> Dict[str, float]:
         self.model.train()
         self._train_sampler.set_epoch(epoch)
@@ -139,6 +278,17 @@ class PretrainTrainer(BaseTrainer):
             steps_seen += 1
 
             batch = move_batch_to_device(batch, self.device)
+            self._check_finite(
+                where="batch_inputs",
+                epoch=epoch,
+                step_in_epoch=step_in_epoch,
+                batch=batch,
+                tensors={
+                    "coords": batch.get("coords"),
+                    "coords_noisy": batch.get("coords_noisy"),
+                    "charges": batch.get("charges"),
+                },
+            )
             self.optimizer.zero_grad()
             outputs = self.model(
                 input_atomic_numbers=batch["input_atomic_numbers"],
@@ -146,10 +296,31 @@ class PretrainTrainer(BaseTrainer):
                 atom_padding=batch["atom_padding"],
                 active_pipeline_tasks=(self._active_task,),
             )
+            self._check_finite(
+                where="forward_outputs",
+                epoch=epoch,
+                step_in_epoch=step_in_epoch,
+                batch=batch,
+                tensors=outputs,
+            )
             losses = self.loss_fn(outputs, batch)
+            self._check_finite(
+                where="loss",
+                epoch=epoch,
+                step_in_epoch=step_in_epoch,
+                batch=batch,
+                tensors=losses,
+            )
             losses["loss"].backward()
             if self.cfg.grad_clip > 0:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip)
+                grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip)
+                self._check_finite(
+                    where="grad_norm",
+                    epoch=epoch,
+                    step_in_epoch=step_in_epoch,
+                    batch=batch,
+                    tensors={"grad_norm": grad_norm if isinstance(grad_norm, torch.Tensor) else torch.tensor(grad_norm)},
+                )
             self.optimizer.step()
             if self.scheduler is not None:
                 self.scheduler.step()

@@ -54,7 +54,7 @@ class ConsoleLogger:
         self._rank = rank
         self._current_rank: Optional[int] = None
         self._log_file = Path(log_file) if log_file else None
-        self._file_phases = set(file_phases) if file_phases is not None else {"init", "epoch", "early_stop"}
+        self._file_phases = set(file_phases) if file_phases is not None else {"init", "epoch", "early_stop", "nonfinite"}
 
     def set_rank(self, rank: int) -> None:
         self._current_rank = rank
