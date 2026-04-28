@@ -840,6 +840,7 @@ class GotenNet(nn.Module):
         self.cutoff_fn = cutoff_fn
         self.cutoff = cutoff_fn.cutoff
         self.lmax = lmax
+        self.epsilon = epsilon
 
         self.node_init = NodeInit(
             [self.hidden_dim, self.hidden_dim],
@@ -980,8 +981,16 @@ class GotenNet(nn.Module):
         h = self.node_init(atomic_numbers, h, edge_index, edge_diff, phi_r0_ij)
         t_ij_init = self.edge_init(edge_index, phi_r0_ij, h)
         mask = edge_index[0] != edge_index[1]
-        r0_ij = torch.norm(edge_vec[mask], dim=1).unsqueeze(1)
-        edge_vec[mask] = edge_vec[mask] / r0_ij
+        # uni_react stability patch: the upstream GotenNet code directly divides
+        # by ||edge_vec|| here. That can produce Inf gradients for duplicate or
+        # near-duplicate coordinates. We keep the forward semantics for normal
+        # edges, but use the DeepMD-style safe-gradient pattern for unsafe edges:
+        # replace unsafe inputs before division, then zero that output branch.
+        edge_vec_masked = edge_vec[mask]
+        sq_norm = torch.sum(edge_vec_masked.square(), dim=1, keepdim=True)
+        safe_mask = sq_norm > self.epsilon**2
+        safe_norm = torch.sqrt(torch.where(safe_mask, sq_norm, torch.ones_like(sq_norm)))
+        edge_vec[mask] = torch.where(safe_mask, edge_vec_masked / safe_norm, torch.zeros_like(edge_vec_masked))
 
         rl_ij = self.sphere(edge_vec)[:, 1:]
 

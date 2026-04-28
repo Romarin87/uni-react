@@ -208,6 +208,7 @@ class PretrainTrainer(BaseTrainer):
         step_in_epoch: int,
         batch: Dict[str, Any],
         tensors: Dict[str, Any],
+        extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         payload: Dict[str, Any] = {
             "where": where,
@@ -222,6 +223,8 @@ class PretrainTrainer(BaseTrainer):
         for name, value in tensors.items():
             if isinstance(value, torch.Tensor):
                 payload["tensors"][name] = self._finite_summary(value)
+        if extra:
+            payload.update(extra)
         write_all_ranks = os.environ.get("NONFINITE_ALL_RANKS", "0") == "1"
         should_emit = self.rank == 0 or write_all_ranks
         if should_emit:
@@ -242,6 +245,7 @@ class PretrainTrainer(BaseTrainer):
         step_in_epoch: int,
         batch: Dict[str, Any],
         tensors: Dict[str, Any],
+        extra: Optional[Dict[str, Any]] = None,
     ) -> None:
         bad = {
             name: value
@@ -259,6 +263,7 @@ class PretrainTrainer(BaseTrainer):
             step_in_epoch=step_in_epoch,
             batch=batch,
             tensors=bad,
+            extra=extra,
         )
         names = ", ".join(sorted(bad))
         raise RuntimeError(
@@ -266,6 +271,131 @@ class PretrainTrainer(BaseTrainer):
             f"epoch={epoch} global_step={self.global_step + 1} "
             f"step_in_epoch={step_in_epoch} rank={self.rank}"
         )
+
+    @staticmethod
+    def _pairwise_distance_summary(
+        coords: torch.Tensor,
+        atom_padding: torch.Tensor,
+        atomic_numbers: Optional[torch.Tensor] = None,
+    ) -> Dict[str, Any]:
+        coords = coords.detach()
+        atom_padding = atom_padding.detach()
+        valid = ~atom_padding
+        batch_size, max_atoms = valid.shape
+        if batch_size == 0 or max_atoms <= 1:
+            return {"num_pairs": 0}
+
+        with torch.no_grad():
+            pair_mask = valid[:, :, None] & valid[:, None, :]
+            eye = torch.eye(max_atoms, dtype=torch.bool, device=coords.device).unsqueeze(0)
+            pair_mask = pair_mask & ~eye
+            sq_dist = torch.sum((coords[:, :, None, :] - coords[:, None, :, :]).square(), dim=-1)
+            pair_sq = sq_dist[pair_mask]
+            if pair_sq.numel() == 0:
+                return {"num_pairs": 0}
+
+            pair_dist = torch.sqrt(pair_sq)
+            masked_sq = sq_dist.masked_fill(~pair_mask, float("inf"))
+            flat_idx = int(torch.argmin(masked_sq.reshape(-1)).item())
+            b = flat_idx // (max_atoms * max_atoms)
+            rem = flat_idx % (max_atoms * max_atoms)
+            i = rem // max_atoms
+            j = rem % max_atoms
+            min_dist = float(torch.sqrt(masked_sq.reshape(-1)[flat_idx]).item())
+            summary: Dict[str, Any] = {
+                "num_pairs": int(pair_dist.numel()),
+                "min_dist": min_dist,
+                "max_dist": float(pair_dist.max().item()),
+                "mean_dist": float(pair_dist.mean().item()),
+                "count_lt_1e-8": int((pair_dist < 1e-8).sum().item()),
+                "count_lt_1e-7": int((pair_dist < 1e-7).sum().item()),
+                "count_lt_1e-6": int((pair_dist < 1e-6).sum().item()),
+                "count_lt_1e-5": int((pair_dist < 1e-5).sum().item()),
+                "min_pair": {
+                    "batch_index": int(b),
+                    "atom_i": int(i),
+                    "atom_j": int(j),
+                    "coord_i": [float(x) for x in coords[b, i].detach().cpu().tolist()],
+                    "coord_j": [float(x) for x in coords[b, j].detach().cpu().tolist()],
+                },
+            }
+            if atomic_numbers is not None:
+                z = atomic_numbers.detach()
+                summary["min_pair"]["z_i"] = int(z[b, i].item())
+                summary["min_pair"]["z_j"] = int(z[b, j].item())
+            return summary
+
+    def _geometry_debug_summary(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+        atom_padding = batch.get("atom_padding")
+        if not isinstance(atom_padding, torch.Tensor):
+            return {}
+        atomic_numbers = batch.get("atomic_numbers")
+        if not isinstance(atomic_numbers, torch.Tensor):
+            atomic_numbers = None
+        summary = {}
+        for name in ("coords", "coords_noisy"):
+            coords = batch.get(name)
+            if isinstance(coords, torch.Tensor):
+                summary[name] = self._pairwise_distance_summary(coords, atom_padding, atomic_numbers)
+        return {"geometry": summary}
+
+    def _gradient_summary(self) -> Dict[str, Any]:
+        param_stats = []
+        norm_terms = []
+        for name, param in self.model.named_parameters():
+            grad = param.grad
+            if grad is None:
+                continue
+            data = grad.detach()
+            if data.numel() == 0:
+                continue
+            finite = torch.isfinite(data)
+            finite_data = data[finite]
+            stat: Dict[str, Any] = {
+                "name": name,
+                "shape": tuple(data.shape),
+                "numel": int(data.numel()),
+                "finite": bool(finite.all().item()),
+                "finite_count": int(finite.sum().item()),
+                "nan_count": int(torch.isnan(data).sum().item()),
+                "posinf_count": int(torch.isposinf(data).sum().item()),
+                "neginf_count": int(torch.isneginf(data).sum().item()),
+            }
+            if finite_data.numel() > 0:
+                finite_float = finite_data.float()
+                stat["max_abs_finite"] = float(finite_float.abs().max().item())
+                stat["mean_abs_finite"] = float(finite_float.abs().mean().item())
+                norm_terms.append(torch.linalg.vector_norm(finite_float, 2))
+            else:
+                stat["max_abs_finite"] = None
+                stat["mean_abs_finite"] = None
+            param_stats.append(stat)
+
+        total_norm = None
+        if norm_terms:
+            total_norm = torch.linalg.vector_norm(torch.stack(norm_terms), 2)
+        nonfinite_params = [s for s in param_stats if not s["finite"]]
+        top_finite_params = sorted(
+            (s for s in param_stats if s["max_abs_finite"] is not None),
+            key=lambda s: s["max_abs_finite"],
+            reverse=True,
+        )[:20]
+        return {
+            "finite_total_norm": float(total_norm.item()) if total_norm is not None else None,
+            "nonfinite_param_count": len(nonfinite_params),
+            "nonfinite_params": nonfinite_params[:50],
+            "top_finite_grad_params": top_finite_params,
+        }
+
+    def _grad_total_norm(self) -> torch.Tensor:
+        device = self.device if self.device is not None else torch.device("cpu")
+        norms = []
+        for param in self.model.parameters():
+            if param.grad is not None:
+                norms.append(torch.linalg.vector_norm(param.grad.detach(), 2))
+        if not norms:
+            return torch.tensor(0.0, device=device)
+        return torch.linalg.vector_norm(torch.stack(norms), 2)
 
     def train_epoch(self, epoch: int) -> Dict[str, float]:
         self.model.train()
@@ -318,14 +448,19 @@ class PretrainTrainer(BaseTrainer):
             )
             losses["loss"].backward()
             if self.cfg.grad_clip > 0:
-                grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip)
+                grad_norm = self._grad_total_norm()
                 self._check_finite(
                     where="grad_norm",
                     epoch=epoch,
                     step_in_epoch=step_in_epoch,
                     batch=batch,
                     tensors={"grad_norm": grad_norm if isinstance(grad_norm, torch.Tensor) else torch.tensor(grad_norm)},
+                    extra={
+                        "gradients": self._gradient_summary(),
+                        "model_debug": self._geometry_debug_summary(batch),
+                    },
                 )
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip)
             self.optimizer.step()
             if self.scheduler is not None:
                 self.scheduler.step()
