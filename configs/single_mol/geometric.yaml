@@ -14,7 +14,7 @@ train_h5:
   - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
 val_h5:
   - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
-batch_size: 512         # Per GPU batch size (total = 512 * 8 = 4096)
+batch_size: 256         # Per GPU batch size (total = 256 * 8 = 2048)
 num_workers: 16
 
 # ---------------------------------------------------------------------------
