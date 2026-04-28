@@ -51,10 +51,10 @@ attn_dropout: 0.1
 # Optimisation
 # ---------------------------------------------------------------------------
 epochs: 20
-lr: 2.0e-4              # Scale up with batch size (1e-4 * sqrt(4) = 2e-4)
+lr: 1.0e-4
 weight_decay: 1.0e-2
-grad_clip: 1.0
-warmup_steps: 1000
+grad_clip: 0.5
+warmup_steps: 5000
 lr_scheduler: cosine
 
 # ---------------------------------------------------------------------------
