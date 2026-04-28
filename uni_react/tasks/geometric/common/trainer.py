@@ -2,6 +2,7 @@
 
 import dataclasses
 import json
+import os
 from typing import Any, Dict, Optional
 
 import torch
@@ -221,12 +222,16 @@ class PretrainTrainer(BaseTrainer):
         for name, value in tensors.items():
             if isinstance(value, torch.Tensor):
                 payload["tensors"][name] = self._finite_summary(value)
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-        nonfinite_path = self.out_dir / f"nonfinite_rank{self.rank}.jsonl"
-        with nonfinite_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
-        print("[nonfinite] " + json.dumps(payload, ensure_ascii=False, default=str), flush=True)
-        if self.logger is not None:
+        write_all_ranks = os.environ.get("NONFINITE_ALL_RANKS", "0") == "1"
+        should_emit = self.rank == 0 or write_all_ranks
+        if should_emit:
+            self.out_dir.mkdir(parents=True, exist_ok=True)
+            filename = f"nonfinite_rank{self.rank}.jsonl" if write_all_ranks else "nonfinite.jsonl"
+            nonfinite_path = self.out_dir / filename
+            with nonfinite_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+            print("[nonfinite] " + json.dumps(payload, ensure_ascii=False, default=str), flush=True)
+        if self.logger is not None and is_main_process(self.rank):
             self.logger.log(payload, step=self.global_step + 1, phase="nonfinite")
 
     def _check_finite(
