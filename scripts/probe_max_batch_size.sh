@@ -7,6 +7,10 @@ HIGH="${HIGH:-512}"
 PROBE_TIMEOUT="${PROBE_TIMEOUT:-180}"
 OUT_ROOT="${OUT_ROOT:-runs/batch_probe}"
 KEEP_RUNS="${KEEP_RUNS:-0}"
+PROBE_SMOKE_ARGS="${PROBE_SMOKE_ARGS:-1}"
+SMOKE_H5_FILE_LIMIT="${SMOKE_H5_FILE_LIMIT:-1}"
+SMOKE_TRAIN_BATCH_LIMIT="${SMOKE_TRAIN_BATCH_LIMIT:-2}"
+SMOKE_VAL_BATCH_LIMIT="${SMOKE_VAL_BATCH_LIMIT:-1}"
 
 mkdir -p "${OUT_ROOT}"
 
@@ -22,22 +26,32 @@ is_oom_log() {
 
 run_probe() {
   local batch_size="$1"
+  shift
   local run_dir="${OUT_ROOT}/bs_${batch_size}"
   local log_file="${OUT_ROOT}/bs_${batch_size}.log"
 
   rm -rf "${run_dir}"
   echo "[PROBE] batch_size=${batch_size} timeout=${PROBE_TIMEOUT}s"
 
+  local probe_args=(
+    --batch_size "${batch_size}"
+    --epochs 1
+    --save_every 999999
+    --save_every_steps 0
+    --log_interval 1
+    --out_dir "${run_dir}"
+  )
+  if [[ "${PROBE_SMOKE_ARGS}" == "1" ]]; then
+    probe_args+=(
+      --smoke_h5_file_limit "${SMOKE_H5_FILE_LIMIT}"
+      --smoke_train_batch_limit "${SMOKE_TRAIN_BATCH_LIMIT}"
+      --smoke_val_batch_limit "${SMOKE_VAL_BATCH_LIMIT}"
+    )
+  fi
+
   set +e
   timeout "${PROBE_TIMEOUT}" \
-    bash "${TRAIN_SCRIPT}" \
-      --batch_size "${batch_size}" \
-      --epochs 1 \
-      --save_every 999999 \
-      --save_every_steps 0 \
-      --log_interval 1 \
-      --out_dir "${run_dir}" \
-      "$@" \
+    bash "${TRAIN_SCRIPT}" "${probe_args[@]}" "$@" \
       >"${log_file}" 2>&1
   local code=$?
   set -e

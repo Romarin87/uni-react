@@ -71,7 +71,10 @@ def split_h5_files(
 
 def build_pretrain_dataset(
     h5_files: Sequence[PathLike],
+    file_limit: int = 0,
     **dataset_kwargs,
 ) -> H5SingleMolPretrainDataset:
     files = expand_h5_files(h5_files)
+    if file_limit > 0:
+        files = files[:file_limit]
     return H5SingleMolPretrainDataset(files, **dataset_kwargs)

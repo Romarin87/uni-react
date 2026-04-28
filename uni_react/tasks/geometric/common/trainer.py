@@ -69,7 +69,11 @@ class PretrainTrainer(BaseTrainer):
             reactivity_global_keys=cfg.vip_vea_keys,
             reactivity_atom_keys=cfg.fukui_keys,
         )
-        train_dataset = build_pretrain_dataset(cfg.train_h5, **dataset_kwargs)
+        train_dataset = build_pretrain_dataset(
+            cfg.train_h5,
+            file_limit=cfg.smoke_h5_file_limit,
+            **dataset_kwargs,
+        )
 
         if distributed:
             base_sampler = DistributedSampler(train_dataset, shuffle=True, drop_last=True)
@@ -94,7 +98,11 @@ class PretrainTrainer(BaseTrainer):
         if cfg.val_h5:
             val_kwargs = dict(dataset_kwargs)
             val_kwargs["deterministic"] = True
-            val_dataset = build_pretrain_dataset(cfg.val_h5, **val_kwargs)
+            val_dataset = build_pretrain_dataset(
+                cfg.val_h5,
+                file_limit=cfg.smoke_h5_file_limit,
+                **val_kwargs,
+            )
             val_sampler = DistributedSampler(val_dataset, shuffle=False, drop_last=False) if distributed else None
             self._val_loader = DataLoader(
                 val_dataset,
@@ -110,7 +118,10 @@ class PretrainTrainer(BaseTrainer):
             )
 
         if self.scheduler is not None and hasattr(self.scheduler, "set_total_steps"):
-            self.scheduler.set_total_steps(max(1, cfg.epochs * len(self._train_loader)))
+            steps_per_epoch = len(self._train_loader)
+            if cfg.smoke_train_batch_limit > 0:
+                steps_per_epoch = min(steps_per_epoch, cfg.smoke_train_batch_limit)
+            self.scheduler.set_total_steps(max(1, cfg.epochs * steps_per_epoch))
 
     def train_epoch(self, epoch: int) -> Dict[str, float]:
         self.model.train()
@@ -121,7 +132,12 @@ class PretrainTrainer(BaseTrainer):
         if is_main_process(self.rank):
             iterator = tqdm(self._train_loader, desc=f"train e{epoch}", leave=False)
 
+        steps_seen = 0
         for step_in_epoch, batch in enumerate(iterator, start=self.resume_step_in_epoch):
+            if self.cfg.smoke_train_batch_limit > 0 and steps_seen >= self.cfg.smoke_train_batch_limit:
+                break
+            steps_seen += 1
+
             batch = move_batch_to_device(batch, self.device)
             self.optimizer.zero_grad()
             outputs = self.model(
@@ -167,7 +183,10 @@ class PretrainTrainer(BaseTrainer):
         if is_main_process(self.rank):
             iterator = tqdm(self._val_loader, desc="val", leave=False)
 
-        for batch in iterator:
+        for step_idx, batch in enumerate(iterator):
+            if self.cfg.smoke_val_batch_limit > 0 and step_idx >= self.cfg.smoke_val_batch_limit:
+                break
+
             batch = move_batch_to_device(batch, self.device)
             outputs = self.model(
                 input_atomic_numbers=batch["input_atomic_numbers"],

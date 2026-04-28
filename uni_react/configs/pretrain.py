@@ -28,6 +28,12 @@ class PretrainConfig:
 
     batch_size: int = 128
     num_workers: int = 16
+    smoke_h5_file_limit: int = 0
+    """Smoke/debug only: use the first N expanded HDF5 files (0 = all files)."""
+    smoke_train_batch_limit: int = 0
+    """Smoke/debug only: stop each training epoch after N batches (0 = full epoch)."""
+    smoke_val_batch_limit: int = 0
+    """Smoke/debug only: stop validation after N batches (0 = full validation)."""
 
     # ------------------------------------------------------------------
     # Data augmentation
@@ -236,6 +242,15 @@ class PretrainConfig:
         
         if self.num_workers < 0:
             raise ValueError(f"num_workers must be >= 0, got {self.num_workers}")
+
+        if self.smoke_h5_file_limit < 0:
+            raise ValueError(f"smoke_h5_file_limit must be >= 0, got {self.smoke_h5_file_limit}")
+
+        if self.smoke_train_batch_limit < 0:
+            raise ValueError(f"smoke_train_batch_limit must be >= 0, got {self.smoke_train_batch_limit}")
+
+        if self.smoke_val_batch_limit < 0:
+            raise ValueError(f"smoke_val_batch_limit must be >= 0, got {self.smoke_val_batch_limit}")
         
         if self.save_every <= 0:
             raise ValueError(f"save_every must be > 0, got {self.save_every}")
