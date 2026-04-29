@@ -1,8 +1,8 @@
-"""CDFT pretraining runtime helpers."""
+"""CDFT task runtime helpers."""
 
 from __future__ import annotations
 
-from ...configs import PretrainConfig
+from ...configs import CDFTConfig
 from ...models import build_model_spec
 from ...training.checkpoint import load_init_checkpoint
 from ...training.optimizer import build_optimizer
@@ -13,7 +13,7 @@ from .spec import CDFTTaskSpec
 
 
 def build_cdft_trainer(
-    cfg: PretrainConfig,
+    cfg: CDFTConfig,
     task_spec: CDFTTaskSpec,
     *,
     device,
@@ -38,6 +38,9 @@ def build_cdft_trainer(
         fukui_weight=cfg.fukui_weight,
         vip_vea_keys=cfg.vip_vea_keys,
         fukui_keys=cfg.fukui_keys,
+        regression_loss_name=cfg.regression_loss,
+        huber_delta=cfg.huber_delta,
+        charbonnier_eps=cfg.charbonnier_eps,
     )
     optimizer = build_optimizer(
         model=model,

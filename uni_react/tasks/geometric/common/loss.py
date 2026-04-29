@@ -5,19 +5,29 @@ from typing import Dict, Tuple
 import torch
 from torch import Tensor
 
+from ....training.losses import RegressionLoss
+
 
 class GeometricStructureLoss:
-    """Weighted sum of atom-mask CE, coord-denoise MSE, and charge MSE."""
+    """Weighted sum of atom-mask CE and configurable regression losses."""
 
     def __init__(
         self,
         atom_weight: float = 1.0,
         coord_weight: float = 1.0,
         charge_weight: float = 1.0,
+        regression_loss_name: str = "mse",
+        huber_delta: float = 1.0,
+        charbonnier_eps: float = 1e-3,
     ) -> None:
         self.atom_weight = float(atom_weight)
         self.coord_weight = float(coord_weight)
         self.charge_weight = float(charge_weight)
+        self.regression_loss = RegressionLoss(
+            regression_loss_name,
+            huber_delta=huber_delta,
+            charbonnier_eps=charbonnier_eps,
+        )
 
     def metric_keys(self) -> Tuple[str, ...]:
         return ("loss", "atom_loss", "coord_loss", "charge_loss")
@@ -85,15 +95,17 @@ class GeometricStructureLoss:
             return (loss * mask_flat).sum() / num_masked
         return loss.mean()
 
-    @staticmethod
-    def _coord_loss(outputs: Dict[str, Tensor], batch: Dict[str, Tensor]) -> Tensor:
-        import torch.nn.functional as F
+    def _coord_loss(self, outputs: Dict[str, Tensor], batch: Dict[str, Tensor]) -> Tensor:
         import warnings
 
         pred = outputs["coords_denoised"]
         target = batch.get("coords_target", batch["coords"])
         pad = batch.get("atom_padding", None)
-        diff = F.mse_loss(pred, target, reduction="none").mean(dim=-1)
+        diff = self.regression_loss(
+            pred,
+            target,
+            reduction="none",
+        ).mean(dim=-1)
         if pad is not None:
             valid = (~pad).float()
             num_valid = valid.sum()
@@ -108,15 +120,17 @@ class GeometricStructureLoss:
             return (diff * valid).sum() / num_valid
         return diff.mean()
 
-    @staticmethod
-    def _charge_loss(outputs: Dict[str, Tensor], batch: Dict[str, Tensor]) -> Tensor:
-        import torch.nn.functional as F
+    def _charge_loss(self, outputs: Dict[str, Tensor], batch: Dict[str, Tensor]) -> Tensor:
         import warnings
 
         pred = outputs["charge_pred"].squeeze(-1)
         target = batch["charges"]
         pad = batch.get("atom_padding", None)
-        loss = F.mse_loss(pred, target, reduction="none")
+        loss = self.regression_loss(
+            pred,
+            target,
+            reduction="none",
+        )
         if pad is not None:
             valid = (~pad).float()
             num_valid = valid.sum()

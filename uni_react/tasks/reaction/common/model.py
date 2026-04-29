@@ -6,6 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
+from ....training.losses import RegressionLoss
+
 
 class ReactionPretrainNet(torch.nn.Module):
     def __init__(
@@ -14,6 +16,9 @@ class ReactionPretrainNet(torch.nn.Module):
         emb_dim: int,
         head_hidden_dim: int = 512,
         teacher_momentum: float = 0.999,
+        regression_loss_name: str = "mse",
+        huber_delta: float = 1.0,
+        charbonnier_eps: float = 1e-3,
     ) -> None:
         super().__init__()
         self.online_descriptor = descriptor
@@ -36,6 +41,11 @@ class ReactionPretrainNet(torch.nn.Module):
         self.complete_ts_head = _mlp(pair_dim, emb_dim)
         self.complete_p_head = _mlp(pair_dim, emb_dim)
         self.complete_r_head = _mlp(pair_dim, emb_dim)
+        self.completion_loss = RegressionLoss(
+            regression_loss_name,
+            huber_delta=huber_delta,
+            charbonnier_eps=charbonnier_eps,
+        )
 
     @staticmethod
     def _pair_feat(a: Tensor, b: Tensor) -> Tensor:
@@ -74,9 +84,9 @@ class ReactionPretrainNet(torch.nn.Module):
             tgt_r = self._encode_graph(self.teacher_descriptor, batch["R_atomic_numbers"], batch["R_coords"], batch["R_padding"])
             tgt_ts = self._encode_graph(self.teacher_descriptor, batch["TS_atomic_numbers"], batch["TS_coords"], batch["TS_padding"])
             tgt_p = self._encode_graph(self.teacher_descriptor, batch["P_atomic_numbers"], batch["P_coords"], batch["P_padding"])
-        comp_ts_loss = F.mse_loss(F.normalize(pred_ts, dim=-1), F.normalize(tgt_ts, dim=-1))
-        comp_p_loss = F.mse_loss(F.normalize(pred_p, dim=-1), F.normalize(tgt_p, dim=-1))
-        comp_r_loss = F.mse_loss(F.normalize(pred_r, dim=-1), F.normalize(tgt_r, dim=-1))
+        comp_ts_loss = self.completion_loss(F.normalize(pred_ts, dim=-1), F.normalize(tgt_ts, dim=-1))
+        comp_p_loss = self.completion_loss(F.normalize(pred_p, dim=-1), F.normalize(tgt_p, dim=-1))
+        comp_r_loss = self.completion_loss(F.normalize(pred_r, dim=-1), F.normalize(tgt_r, dim=-1))
         comp_loss = (comp_ts_loss + comp_p_loss + comp_r_loss) / 3.0
         return {
             "cons_logits": cons_logits,

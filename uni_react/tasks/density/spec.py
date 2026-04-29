@@ -1,4 +1,4 @@
-"""Density pretraining task specification."""
+"""Density task training task specification."""
 
 from __future__ import annotations
 

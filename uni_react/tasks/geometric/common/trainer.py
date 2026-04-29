@@ -9,8 +9,8 @@ import torch
 from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 
-from ....configs.pretrain import PretrainConfig
-from ....logger import LoggerProtocol
+from ....configs.geometric import GeometricConfig
+from ....training.logger import LoggerProtocol
 from ....training.batch import move_batch_to_device
 from ....training.distributed import is_main_process
 from ....training import BaseTrainer, MetricBag
@@ -25,7 +25,7 @@ class PretrainTrainer(BaseTrainer):
         model: torch.nn.Module,
         loss_fn: Any,
         optimizer: torch.optim.Optimizer,
-        cfg: PretrainConfig,
+        cfg: GeometricConfig,
         scheduler=None,
         logger: Optional[LoggerProtocol] = None,
         distributed: bool = False,

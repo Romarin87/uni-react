@@ -1,4 +1,4 @@
-# GotenNet-B - QM9 gap fine-tuning
+# GotenNet-B - QM9 gap QM9 task
 # Mirrors the official-style GotenNet QM9 recipe:
 # - gotennet split / target mapping
 # - no coordinate centering

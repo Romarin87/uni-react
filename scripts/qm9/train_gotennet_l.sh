@@ -76,7 +76,7 @@ for target in "${TARGETS[@]}"; do
     --nproc_per_node="${NPROC_PER_NODE}"
     --master_addr="${MASTER_ADDR}"
     --master_port="${MASTER_PORT}"
-    -m uni_react.train_finetune_qm9
+    -m uni_react.train_qm9
     --config "${CONFIG}"
     --model_name gotennet_l
     --data_root "${DATA_ROOT}"

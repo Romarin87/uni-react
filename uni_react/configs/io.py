@@ -14,7 +14,7 @@ try:
 except ImportError:
     _HAS_YAML = False
 
-from ..logger import build_event_logger
+from ..training.logger import build_event_logger
 
 T = TypeVar("T")
 
@@ -27,7 +27,7 @@ def load_config(path: str, schema: Type[T]) -> T:
 
     Args:
         path: Path to a ``.yaml`` / ``.yml`` or ``.json`` config file.
-        schema: A dataclass type (e.g. :class:`~uni_react.configs.PretrainConfig`).
+        schema: A dataclass type (e.g. :class:`~uni_react.configs.GeometricConfig`).
 
     Returns:
         A fully initialised instance of *schema*.

@@ -135,7 +135,7 @@ def load_pyg_qm9(root: str, force_reload: bool = False):
     except ImportError as exc:
         raise ImportError(
             "torch_geometric is required for QM9 finetuning. Install PyG before running "
-            "`uni_react/train_finetune_qm9.py`."
+            "`uni_react/train_qm9.py`."
         ) from exc
     return cls(root=str(Path(root)), force_reload=force_reload)
 

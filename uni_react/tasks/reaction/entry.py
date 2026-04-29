@@ -1,9 +1,9 @@
-"""Reaction pretraining CLI entry helpers."""
+"""Reaction task CLI entry helpers."""
 
 from __future__ import annotations
 
 from ...configs import (
-    ReactionPretrainConfig,
+    ReactionConfig,
     build_console_logger,
     build_dataclass_arg_parser,
     dump_runtime_config,
@@ -17,11 +17,11 @@ from .spec import resolve_reaction_task_spec
 
 def run_reaction_entry() -> None:
     parser = build_dataclass_arg_parser(
-        ReactionPretrainConfig,
-        "uni-react stage-3 reaction triplet pretraining",
+        ReactionConfig,
+        "uni-react reaction task",
     )
     args = parser.parse_args()
-    cfg = load_dataclass_config(args, ReactionPretrainConfig)
+    cfg = load_dataclass_config(args, ReactionConfig)
     task_spec = resolve_reaction_task_spec(cfg)
 
     if not cfg.train_h5:

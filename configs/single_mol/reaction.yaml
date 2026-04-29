@@ -1,6 +1,6 @@
 # SingleMol Encoder - Reaction Triplet Pretraining
 # Stage 3: Reaction consistency learning (reactant + reagent → product)
-# Run: python -m uni_react.train_pretrain_reaction --config configs/single_mol/reaction.yaml
+# Run: python -m uni_react.train_reaction --config configs/single_mol/reaction.yaml
 
 # ---------------------------------------------------------------------------
 # Data

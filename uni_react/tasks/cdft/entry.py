@@ -1,11 +1,11 @@
-"""CDFT pretraining CLI entry helpers."""
+"""CDFT task CLI entry helpers."""
 
 from __future__ import annotations
 
 import dataclasses
 
 from ...configs import (
-    PretrainConfig,
+    CDFTConfig,
     build_console_logger,
     build_dataclass_arg_parser,
     dump_runtime_config,
@@ -19,11 +19,11 @@ from .spec import resolve_cdft_task_spec
 
 def run_cdft_entry() -> None:
     parser = build_dataclass_arg_parser(
-        PretrainConfig,
-        "uni-react CDFT pretraining",
+        CDFTConfig,
+        "uni-react CDFT task",
     )
     args = parser.parse_args()
-    cfg = load_dataclass_config(args, PretrainConfig)
+    cfg = load_dataclass_config(args, CDFTConfig)
     cfg = dataclasses.replace(cfg, train_mode="cdft")
     task_spec = resolve_cdft_task_spec(cfg)
     if not cfg.out_dir:

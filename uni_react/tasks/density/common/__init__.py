@@ -1,6 +1,7 @@
 """Common density builders."""
 
 from .dataset import H5DensityPretrainDataset, collate_fn_density
+from .loss import DensityRegressionLoss
 from .model import DensityPretrainNet, QueryPointDensityHead
 from .trainer import DensityPretrainTrainer
 
@@ -20,6 +21,7 @@ def build_density_model(cfg, model_spec, task_spec=None):
 __all__ = [
     "H5DensityPretrainDataset",
     "collate_fn_density",
+    "DensityRegressionLoss",
     "DensityPretrainNet",
     "QueryPointDensityHead",
     "DensityPretrainTrainer",

@@ -1,4 +1,4 @@
-"""Density pretraining CLI entry helpers."""
+"""Density task CLI entry helpers."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import dataclasses
 from pathlib import Path
 
 from ...configs import (
-    DensityPretrainConfig,
+    DensityConfig,
     build_console_logger,
     build_dataclass_arg_parser,
     dump_runtime_config,
@@ -20,11 +20,11 @@ from .spec import resolve_density_task_spec
 
 def run_density_entry() -> None:
     parser = build_dataclass_arg_parser(
-        DensityPretrainConfig,
-        "Stage-2 electron density pretraining",
+        DensityConfig,
+        "uni-react density task",
     )
     args = parser.parse_args()
-    cfg = load_dataclass_config(args, DensityPretrainConfig)
+    cfg = load_dataclass_config(args, DensityConfig)
     task_spec = resolve_density_task_spec(cfg)
 
     distributed, rank, world_size, local_rank, device = init_distributed(cfg.device)

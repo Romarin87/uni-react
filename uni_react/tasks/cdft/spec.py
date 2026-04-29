@@ -1,4 +1,4 @@
-"""CDFT pretraining task specification."""
+"""CDFT task training task specification."""
 
 from __future__ import annotations
 

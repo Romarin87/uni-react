@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 
-from ....configs.pretrain_reaction import ReactionPretrainConfig
-from ....logger import LoggerProtocol
+from ....configs.reaction import ReactionConfig
+from ....training.logger import LoggerProtocol
 from ....training.batch import move_batch_to_device
 from ....training.distributed import is_main_process
 from ....training import BaseTrainer, MetricBag
@@ -21,7 +21,7 @@ class ReactionPretrainTrainer(BaseTrainer):
     def __init__(
         self,
         model: torch.nn.Module,
-        cfg: ReactionPretrainConfig,
+        cfg: ReactionConfig,
         optimizer: torch.optim.Optimizer,
         scheduler=None,
         logger: Optional[LoggerProtocol] = None,

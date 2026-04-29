@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TRAIN_SCRIPT="${TRAIN_SCRIPT:-scripts/pretrain_geometric/train_gotennet_l.sh}"
+TRAIN_SCRIPT="${TRAIN_SCRIPT:-scripts/geometric/train_gotennet_l.sh}"
 LOW="${LOW:-1}"
 HIGH="${HIGH:-512}"
 PROBE_TIMEOUT="${PROBE_TIMEOUT:-180}"

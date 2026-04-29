@@ -49,11 +49,11 @@ def tiny_batch(tiny_dataset):
 
 @pytest.fixture(scope="module")
 def tiny_model():
-    from uni_react.configs import DensityPretrainConfig
+    from uni_react.configs import DensityConfig
     from uni_react.models import build_model_spec
     from uni_react.tasks import build_density_model, resolve_density_task_spec
 
-    cfg = DensityPretrainConfig(
+    cfg = DensityConfig(
         model_name="single_mol",
         emb_dim=32,
         inv_layer=1,
@@ -257,11 +257,11 @@ class TestDensityPretrainNet:
         """Save and reload a checkpoint; verify state dict matches."""
         ckpt_path = tmp_path / "density_test.pt"
         torch.save({"model": tiny_model.state_dict()}, ckpt_path)
-        from uni_react.configs import DensityPretrainConfig
+        from uni_react.configs import DensityConfig
         from uni_react.models import build_model_spec
         from uni_react.tasks import resolve_density_task_spec
 
-        cfg = DensityPretrainConfig(
+        cfg = DensityConfig(
             model_name="single_mol",
             emb_dim=32, inv_layer=1, se3_layer=1, heads=4,
             atom_vocab_size=16, cutoff=3.0, num_kernel=16,

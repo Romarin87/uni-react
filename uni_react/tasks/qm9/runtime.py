@@ -10,7 +10,7 @@ from typing import Dict, List
 import torch
 import torch.distributed as dist
 
-from ...configs import FinetuneQM9Config
+from ...configs import QM9Config
 from ...models import build_qm9_model_spec
 from ...training.checkpoint import load_init_checkpoint
 from ...training.distributed import is_main_process
@@ -25,14 +25,14 @@ from .results import write_qm9_outputs
 from .spec import QM9TaskSpec, resolve_qm9_task_spec
 
 
-def parse_targets(cfg: FinetuneQM9Config) -> List[str]:
+def parse_targets(cfg: QM9Config) -> List[str]:
     targets = cfg.targets or [cfg.target]
     if len(targets) == 1 and targets[0].lower() == "all":
         return list(QM9_TARGETS)
     return targets
 
 
-def prepare_qm9_config(cfg: FinetuneQM9Config) -> tuple[FinetuneQM9Config, QM9TaskSpec, List[str]]:
+def prepare_qm9_config(cfg: QM9Config) -> tuple[QM9Config, QM9TaskSpec, List[str]]:
     targets = parse_targets(cfg)
     task_spec = resolve_qm9_task_spec(cfg)
     if not cfg.task_variant:
@@ -50,7 +50,7 @@ def prepare_qm9_config(cfg: FinetuneQM9Config) -> tuple[FinetuneQM9Config, QM9Ta
 
 
 def build_qm9_trainer(
-    cfg: FinetuneQM9Config,
+    cfg: QM9Config,
     task_spec: QM9TaskSpec,
     targets: List[str],
     *,
@@ -102,7 +102,7 @@ def build_qm9_trainer(
 
 
 def finalize_qm9_training(
-    cfg: FinetuneQM9Config,
+    cfg: QM9Config,
     trainer,
     *,
     distributed: bool,
@@ -120,7 +120,7 @@ def finalize_qm9_training(
         write_qm9_outputs(cfg.out_dir, trainer, best_metrics)
 
 
-def _build_qm9_optimizer(cfg: FinetuneQM9Config, model: torch.nn.Module) -> torch.optim.Optimizer:
+def _build_qm9_optimizer(cfg: QM9Config, model: torch.nn.Module) -> torch.optim.Optimizer:
     if cfg.model_name.startswith("gotennet_"):
         return torch.optim.AdamW(
             [p for p in model.parameters() if p.requires_grad],
@@ -138,7 +138,7 @@ def _build_qm9_optimizer(cfg: FinetuneQM9Config, model: torch.nn.Module) -> torc
 
 
 def _build_qm9_scheduler(
-    cfg: FinetuneQM9Config,
+    cfg: QM9Config,
     optimizer: torch.optim.Optimizer,
 ):
     if cfg.lr_scheduler in {"cosine", "linear"}:
@@ -156,7 +156,7 @@ def _sanitize_qm9_family_token(value: str) -> str:
     return token or "custom"
 
 
-def _infer_qm9_run_family(cfg: FinetuneQM9Config) -> str:
+def _infer_qm9_run_family(cfg: QM9Config) -> str:
     if not cfg.pretrained_ckpt:
         return "scratch"
     ckpt = cfg.pretrained_ckpt.lower()
@@ -180,7 +180,7 @@ def _infer_qm9_run_family(cfg: FinetuneQM9Config) -> str:
     return f"finetune_from_{source_token}"
 
 
-def _derive_qm9_out_dir(cfg: FinetuneQM9Config, targets: List[str]) -> str:
+def _derive_qm9_out_dir(cfg: QM9Config, targets: List[str]) -> str:
     if cfg.restart:
         return str(Path(cfg.restart).resolve().parent)
     run_family = _infer_qm9_run_family(cfg)

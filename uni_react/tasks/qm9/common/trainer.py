@@ -9,8 +9,8 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 
-from ....configs.finetune_qm9 import FinetuneQM9Config
-from ....logger import LoggerProtocol
+from ....configs.qm9 import QM9Config
+from ....training.logger import LoggerProtocol
 from ....training.batch import move_batch_to_device
 from ....training.distributed import is_main_process
 from ....training import BaseTrainer, MetricBag
@@ -51,7 +51,7 @@ class FinetuneQM9Trainer(BaseTrainer):
     def __init__(
         self,
         model: torch.nn.Module,
-        cfg: FinetuneQM9Config,
+        cfg: QM9Config,
         optimizer: torch.optim.Optimizer,
         targets: List[str],
         scheduler=None,
@@ -79,7 +79,11 @@ class FinetuneQM9Trainer(BaseTrainer):
         )
         self.cfg = cfg
         self.targets = targets
-        self.loss_fn = QM9RegressionLoss()
+        self.loss_fn = QM9RegressionLoss(
+            regression_loss_name=cfg.regression_loss,
+            huber_delta=cfg.huber_delta,
+            charbonnier_eps=cfg.charbonnier_eps,
+        )
         self.freeze_backbone_epochs = cfg.freeze_backbone_epochs
 
         splits = build_qm9_pyg_splits(

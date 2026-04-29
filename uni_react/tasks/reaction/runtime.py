@@ -1,8 +1,8 @@
-"""Reaction pretraining runtime helpers."""
+"""Reaction task runtime helpers."""
 
 from __future__ import annotations
 
-from ...configs import ReactionPretrainConfig
+from ...configs import ReactionConfig
 from ...models import build_model_spec
 from ...training.checkpoint import load_init_checkpoint
 from ...training.optimizer import build_split_lr_optimizer
@@ -12,7 +12,7 @@ from .spec import ReactionTaskSpec
 
 
 def build_reaction_trainer(
-    cfg: ReactionPretrainConfig,
+    cfg: ReactionConfig,
     task_spec: ReactionTaskSpec,
     *,
     device,

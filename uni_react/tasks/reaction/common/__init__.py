@@ -13,6 +13,9 @@ def build_reaction_model(cfg, model_spec, task_spec=None):
         emb_dim=cfg.emb_dim,
         head_hidden_dim=cfg.head_hidden_dim,
         teacher_momentum=cfg.teacher_momentum,
+        regression_loss_name=cfg.regression_loss,
+        huber_delta=cfg.huber_delta,
+        charbonnier_eps=cfg.charbonnier_eps,
     )
 
 

@@ -7,13 +7,13 @@ from typing import Dict, Optional
 
 import torch
 import torch.distributed as dist
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 
-from ....logger import LoggerProtocol
+from ....training.logger import LoggerProtocol
 from ....training.distributed import is_main_process
 from ....training import BaseTrainer
+from .loss import DensityRegressionLoss
 
 
 def _move_batch_to_device(batch: Dict[str, torch.Tensor], device: torch.device) -> Dict[str, torch.Tensor]:
@@ -75,6 +75,11 @@ class DensityPretrainTrainer(BaseTrainer):
         self.cfg = cfg
         self._train_loader = train_loader
         self._val_loader = val_loader
+        self.loss_fn = DensityRegressionLoss(
+            regression_loss_name=cfg.regression_loss,
+            huber_delta=cfg.huber_delta,
+            charbonnier_eps=cfg.charbonnier_eps,
+        )
         self._train_sampler = train_loader.sampler if isinstance(train_loader.sampler, DistributedSampler) else None
         if self.scheduler is not None and hasattr(self.scheduler, "set_total_steps"):
             self.scheduler.set_total_steps(max(1, cfg.epochs * len(self._train_loader)))
@@ -102,9 +107,8 @@ class DensityPretrainTrainer(BaseTrainer):
                     )
                     pred = out["density_pred"]
                     tgt = batch["density_target"]
-                    mse = F.mse_loss(pred, tgt)
-                    mae = F.l1_loss(pred, tgt)
-                    loss = mse
+                    losses = self.loss_fn(pred, tgt)
+                    loss = losses["loss"]
                     loss.backward()
                     if self.cfg.grad_clip > 0:
                         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip)
@@ -123,15 +127,14 @@ class DensityPretrainTrainer(BaseTrainer):
                     )
                     pred = out["density_pred"]
                     tgt = batch["density_target"]
-                    mse = F.mse_loss(pred, tgt)
-                    mae = F.l1_loss(pred, tgt)
-                    loss = mse
+                    losses = self.loss_fn(pred, tgt)
+                    loss = losses["loss"]
 
             batch_metrics = {
                 "loss": float(loss.item()),
-                "mse": float(mse.item()),
-                "mae": float(mae.item()),
-                "rmse": float(torch.sqrt(torch.clamp(mse, min=0.0)).item()),
+                "mse": float(losses["mse"].item()),
+                "mae": float(losses["mae"].item()),
+                "rmse": float(losses["rmse"].item()),
             }
             if self.cfg.log_interval > 0 and (self.global_step == 0 or self.global_step % self.cfg.log_interval == 0):
                 if is_main_process(self.rank) and hasattr(iterator, "set_postfix"):

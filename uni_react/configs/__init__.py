@@ -3,14 +3,16 @@
 Usage
 -----
 Load a YAML config, override with CLI args, then pass the resulting
-:class:`PretrainConfig` / :class:`FinetuneQM9Config` to the training loop::
+task config to the training loop::
 
-    from uni_react.configs import PretrainConfig, load_config, merge_cli_args
+    from uni_react.configs import GeometricConfig, load_config, merge_cli_args
 
-    cfg = load_config("configs/single_mol/geometric.yaml", PretrainConfig)
+    cfg = load_config("configs/single_mol/geometric.yaml", GeometricConfig)
     cfg = merge_cli_args(cfg, cli_overrides)   # dict of CLI key→value
 """
-from .finetune_qm9 import FinetuneQM9Config
+from .cdft import CDFTConfig
+from .density import DensityConfig
+from .geometric import GeometricConfig
 from .io import (
     build_console_logger,
     build_dataclass_arg_parser,
@@ -20,16 +22,16 @@ from .io import (
     load_dataclass_config,
     merge_cli_args,
 )
-from .pretrain_density import DensityPretrainConfig
-from .pretrain import PretrainConfig
-from .pretrain_reaction import ReactionPretrainConfig
+from .qm9 import QM9Config
+from .reaction import ReactionConfig
 
 __all__ = [
     # top-level run configs
-    "PretrainConfig",
-    "DensityPretrainConfig",
-    "FinetuneQM9Config",
-    "ReactionPretrainConfig",
+    "GeometricConfig",
+    "CDFTConfig",
+    "DensityConfig",
+    "QM9Config",
+    "ReactionConfig",
     # I/O
     "build_dataclass_arg_parser",
     "load_dataclass_config",

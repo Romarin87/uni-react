@@ -195,7 +195,7 @@ class TestBaseTrainer:
         assert resumed.resume_step_in_epoch == 7
 
     def test_reaction_trainer_respects_save_optimizer_flag(self, tmp_path):
-        from uni_react.configs import ReactionPretrainConfig
+        from uni_react.configs import ReactionConfig
         from uni_react.tasks.reaction.common import ReactionPretrainNet
         from uni_react.models import build_model_spec
         from uni_react.tasks.reaction.common.trainer import ReactionPretrainTrainer
@@ -217,7 +217,7 @@ class TestBaseTrainer:
                 g.create_dataset(f"{prefix}_Z", data=z)
                 g.create_dataset(f"{prefix}_R", data=coords)
 
-        cfg = ReactionPretrainConfig(
+        cfg = ReactionConfig(
             train_h5=str(h5_path),
             val_h5=str(h5_path),
             batch_size=1,
@@ -252,7 +252,7 @@ class TestBaseTrainer:
         assert "optimizer" not in ckpt
 
     def test_qm9_trainer_respects_save_optimizer_flag(self, monkeypatch, tmp_path):
-        from uni_react.configs import FinetuneQM9Config
+        from uni_react.configs import QM9Config
         from uni_react.models import build_model_spec
         from uni_react.tasks import build_qm9_model, resolve_qm9_task_spec
         from uni_react.tasks.qm9.common.trainer import FinetuneQM9Trainer
@@ -283,7 +283,7 @@ class TestBaseTrainer:
             },
         )
 
-        cfg = FinetuneQM9Config(
+        cfg = QM9Config(
             model_name="single_mol",
             batch_size=2,
             num_workers=0,
@@ -635,7 +635,7 @@ class TestSchedulers:
         assert restored.state_dict()["total_steps"] == 4
 
     def test_pretrain_trainer_updates_scheduler_total_steps(self, monkeypatch, tmp_path):
-        from uni_react.configs import PretrainConfig
+        from uni_react.configs import GeometricConfig
         from uni_react.tasks.geometric.common.trainer import PretrainTrainer
 
         class DummyDataset(torch.utils.data.Dataset):
@@ -678,7 +678,7 @@ class TestSchedulers:
             lambda *args, **kwargs: DummyDataset(),
         )
 
-        cfg = PretrainConfig(
+        cfg = GeometricConfig(
             train_h5=["dummy.h5"],
             batch_size=4,
             num_workers=0,
@@ -703,7 +703,7 @@ class TestSchedulers:
         assert scheduler.total_steps == 6
 
     def test_density_trainer_advances_distributed_sampler_epoch(self, tmp_path):
-        from uni_react.configs import DensityPretrainConfig
+        from uni_react.configs import DensityConfig
         from uni_react.tasks.density.common.trainer import DensityPretrainTrainer
 
         class DummyDataset(torch.utils.data.Dataset):
@@ -747,7 +747,7 @@ class TestSchedulers:
 
         sampler = DummySampler()
         loader = torch.utils.data.DataLoader(DummyDataset(), batch_size=2, sampler=sampler)
-        cfg = DensityPretrainConfig(
+        cfg = DensityConfig(
             train_h5=["dummy.h5"],
             batch_size=2,
             num_workers=0,
@@ -770,7 +770,7 @@ class TestSchedulers:
         assert sampler.epochs == [3]
 
     def test_qm9_trainer_advances_distributed_sampler_epoch(self, monkeypatch, tmp_path):
-        from uni_react.configs import FinetuneQM9Config
+        from uni_react.configs import QM9Config
         from uni_react.tasks.qm9.common.trainer import FinetuneQM9Trainer
 
         class DummyDataset(torch.utils.data.Dataset):
@@ -818,7 +818,7 @@ class TestSchedulers:
         )
         monkeypatch.setattr("uni_react.tasks.qm9.common.trainer.DistributedSampler", DummySampler)
 
-        cfg = FinetuneQM9Config(
+        cfg = QM9Config(
             batch_size=2,
             num_workers=0,
             epochs=2,

@@ -3,12 +3,25 @@
 from typing import Dict, Optional, Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
+
+from ....training.losses import RegressionLoss
 
 
 class QM9RegressionLoss:
-    """Normalised MSE loss for QM9 property regression."""
+    """Normalised configurable loss for QM9 property regression."""
+
+    def __init__(
+        self,
+        regression_loss_name: str = "mse",
+        huber_delta: float = 1.0,
+        charbonnier_eps: float = 1e-3,
+    ) -> None:
+        self.regression_loss = RegressionLoss(
+            regression_loss_name,
+            huber_delta=huber_delta,
+            charbonnier_eps=charbonnier_eps,
+        )
 
     def metric_keys(self) -> Tuple[str, ...]:
         return ("loss", "mae")
@@ -30,11 +43,11 @@ class QM9RegressionLoss:
             mean = target_mean.unsqueeze(0)
             std = target_std.unsqueeze(0)
             target_norm = (target - mean) / std
-            loss = F.mse_loss(pred_norm, target_norm)
+            loss = self.regression_loss(pred_norm, target_norm)
             pred = pred_norm * std + mean
             mae = torch.abs(pred - target).mean()
         else:
-            loss = F.mse_loss(pred_norm, target)
+            loss = self.regression_loss(pred_norm, target)
             mae = torch.abs(pred_norm - target).mean()
 
         return {"loss": loss, "mae": mae}

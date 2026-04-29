@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict
 
-from uni_react.logger import ResultWriter
+from uni_react.training.logger import ResultWriter
 
 
 def write_qm9_outputs(

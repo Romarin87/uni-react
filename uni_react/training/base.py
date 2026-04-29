@@ -7,7 +7,7 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from ..logger import LoggerProtocol
+from .logger import LoggerProtocol
 from .accumulator import MetricBag
 from .checkpoint import validate_restart_config
 from .distributed import is_main_process

@@ -1,11 +1,11 @@
-"""Geometric pretraining CLI entry helpers."""
+"""Geometric task CLI entry helpers."""
 
 from __future__ import annotations
 
 import dataclasses
 
 from ...configs import (
-    PretrainConfig,
+    GeometricConfig,
     build_console_logger,
     build_dataclass_arg_parser,
     dump_runtime_config,
@@ -19,11 +19,11 @@ from .spec import resolve_geometric_task_spec
 
 def run_geometric_entry() -> None:
     parser = build_dataclass_arg_parser(
-        PretrainConfig,
-        "uni-react geometric pretraining",
+        GeometricConfig,
+        "uni-react geometric task",
     )
     args = parser.parse_args()
-    cfg = load_dataclass_config(args, PretrainConfig)
+    cfg = load_dataclass_config(args, GeometricConfig)
     cfg = dataclasses.replace(cfg, train_mode="geometric_structure")
     task_spec = resolve_geometric_task_spec(cfg)
     if not cfg.out_dir:

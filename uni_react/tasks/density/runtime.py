@@ -1,10 +1,10 @@
-"""Density pretraining runtime helpers."""
+"""Density task runtime helpers."""
 
 from __future__ import annotations
 
 from torch.utils.data import DataLoader, DistributedSampler
 
-from ...configs import DensityPretrainConfig
+from ...configs import DensityConfig
 from ...models import build_model_spec
 from ...training.checkpoint import load_init_checkpoint
 from ...training.optimizer import build_split_lr_optimizer
@@ -16,7 +16,7 @@ from .spec import DensityTaskSpec
 
 
 def build_density_trainer(
-    cfg: DensityPretrainConfig,
+    cfg: DensityConfig,
     task_spec: DensityTaskSpec,
     *,
     device,

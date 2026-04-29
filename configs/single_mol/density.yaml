@@ -1,6 +1,6 @@
 # SingleMol Encoder - Electron Density Pretraining
 # Task: Electron density prediction
-# Run: python -m uni_react.train_pretrain_density --config configs/single_mol/density.yaml
+# Run: python -m uni_react.train_density --config configs/single_mol/density.yaml
 
 # ---------------------------------------------------------------------------
 # Training mode
@@ -20,7 +20,7 @@ num_workers: 16
 # ---------------------------------------------------------------------------
 # Data augmentation (minimal for density)
 # ---------------------------------------------------------------------------
-# Density pretraining keeps the same augmentation knobs in the config surface,
+# Density task training keeps the same augmentation knobs in the config surface,
 # even though this recipe leaves them disabled.
 mask_ratio: 0.0
 noise_std: 0.0

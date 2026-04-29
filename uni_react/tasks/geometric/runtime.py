@@ -1,8 +1,8 @@
-"""Geometric pretraining runtime helpers."""
+"""Geometric task runtime helpers."""
 
 from __future__ import annotations
 
-from ...configs import PretrainConfig
+from ...configs import GeometricConfig
 from ...models import build_model_spec
 from ...training.checkpoint import load_init_checkpoint
 from ...training.optimizer import build_optimizer
@@ -13,7 +13,7 @@ from .spec import GeometricTaskSpec
 
 
 def build_geometric_trainer(
-    cfg: PretrainConfig,
+    cfg: GeometricConfig,
     task_spec: GeometricTaskSpec,
     *,
     device,
@@ -37,6 +37,9 @@ def build_geometric_trainer(
         atom_weight=cfg.atom_weight,
         coord_weight=cfg.coord_weight,
         charge_weight=cfg.charge_weight,
+        regression_loss_name=cfg.regression_loss,
+        huber_delta=cfg.huber_delta,
+        charbonnier_eps=cfg.charbonnier_eps,
     )
     optimizer = build_optimizer(
         model=model,

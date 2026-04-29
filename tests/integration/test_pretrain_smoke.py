@@ -5,8 +5,8 @@ import torch
 
 @pytest.fixture
 def tiny_cfg():
-    from uni_react.configs import PretrainConfig
-    return PretrainConfig(
+    from uni_react.configs import GeometricConfig
+    return GeometricConfig(
         model_name="single_mol",
         emb_dim=32,
         inv_layer=1,

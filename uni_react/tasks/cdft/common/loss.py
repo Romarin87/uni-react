@@ -3,12 +3,13 @@
 from typing import Dict, List, Optional, Tuple
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
+
+from ....training.losses import RegressionLoss
 
 
 class ElectronicStructureLoss:
-    """Weighted sum of VIP/VEA MSE and Fukui-index MSE."""
+    """Weighted sum of VIP/VEA and Fukui-index regression losses."""
 
     def __init__(
         self,
@@ -16,11 +17,19 @@ class ElectronicStructureLoss:
         fukui_weight: float = 1.0,
         vip_vea_keys: Optional[List[str]] = None,
         fukui_keys: Optional[List[str]] = None,
+        regression_loss_name: str = "mse",
+        huber_delta: float = 1.0,
+        charbonnier_eps: float = 1e-3,
     ) -> None:
         self.vip_vea_weight = float(vip_vea_weight)
         self.fukui_weight = float(fukui_weight)
         self.vip_vea_keys: List[str] = vip_vea_keys or ["vip", "vea"]
         self.fukui_keys: List[str] = fukui_keys or ["f_plus", "f_minus", "f_zero"]
+        self.regression_loss = RegressionLoss(
+            regression_loss_name,
+            huber_delta=huber_delta,
+            charbonnier_eps=charbonnier_eps,
+        )
 
     def metric_keys(self) -> Tuple[str, ...]:
         base = ("loss", "vip_vea_loss", "fukui_loss")
@@ -40,10 +49,10 @@ class ElectronicStructureLoss:
         vip_pred = outputs.get("vip_vea_pred")
         vip_target = batch.get("reactivity_global")
         if isinstance(vip_pred, Tensor) and isinstance(vip_target, Tensor):
-            vip_vea_loss = F.mse_loss(vip_pred, vip_target[:, : vip_pred.shape[-1]])
+            vip_vea_loss = self._regression(vip_pred, vip_target[:, : vip_pred.shape[-1]])
             count = min(vip_pred.shape[-1], len(self.vip_vea_keys))
             for idx in range(count):
-                component_vip_vea[f"vip_vea_loss_{self.vip_vea_keys[idx]}"] = F.mse_loss(
+                component_vip_vea[f"vip_vea_loss_{self.vip_vea_keys[idx]}"] = self._regression(
                     vip_pred[:, idx],
                     vip_target[:, idx],
                 )
@@ -66,7 +75,7 @@ class ElectronicStructureLoss:
                 valid = valid & atom_valid_mask
             valid_f = valid.float()
             denom = valid_f.sum() + 1e-8
-            diff = F.mse_loss(
+            diff = self._regression(
                 fukui_pred,
                 fukui_target[:, :, : fukui_pred.shape[-1]],
                 reduction="none",
@@ -87,6 +96,9 @@ class ElectronicStructureLoss:
         metrics.update(component_vip_vea)
         metrics.update(component_fukui)
         return metrics
+
+    def _regression(self, pred: Tensor, target: Tensor, reduction: str = "mean") -> Tensor:
+        return self.regression_loss(pred, target, reduction=reduction)
 
     @staticmethod
     def _zero(outputs: Dict[str, Tensor]) -> Tensor:

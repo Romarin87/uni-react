@@ -1,4 +1,4 @@
-"""Geometric pretraining task specification."""
+"""Geometric task training task specification."""
 
 from __future__ import annotations
 
