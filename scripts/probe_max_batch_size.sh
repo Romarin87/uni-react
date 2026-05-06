@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TRAIN_SCRIPT="${TRAIN_SCRIPT:-scripts/geometric/train_gotennet_l.sh}"
+TRAIN_SCRIPT="${TRAIN_SCRIPT:-scripts/joint/train_gotennet_l.sh}"
 LOW="${LOW:-1}"
 HIGH="${HIGH:-512}"
 PROBE_TIMEOUT="${PROBE_TIMEOUT:-180}"
@@ -11,6 +11,7 @@ PROBE_SMOKE_ARGS="${PROBE_SMOKE_ARGS:-1}"
 SMOKE_H5_FILE_LIMIT="${SMOKE_H5_FILE_LIMIT:-1}"
 SMOKE_TRAIN_BATCH_LIMIT="${SMOKE_TRAIN_BATCH_LIMIT:-100}"
 SMOKE_VAL_BATCH_LIMIT="${SMOKE_VAL_BATCH_LIMIT:-1}"
+JOINT_CONFIG="${CONFIG:-configs/gotennet_l/joint.yaml}"
 
 mkdir -p "${OUT_ROOT}"
 
@@ -33,24 +34,61 @@ run_probe() {
   rm -rf "${run_dir}"
   echo "[PROBE] batch_size=${batch_size} timeout=${PROBE_TIMEOUT}s"
 
-  local probe_args=(
-    --batch_size "${batch_size}"
-    --epochs 1
-    --save_every 999999
-    --save_every_steps 0
-    --log_interval 1
-    --out_dir "${run_dir}"
-  )
-  if [[ "${PROBE_SMOKE_ARGS}" == "1" ]]; then
-    probe_args+=(
-      --smoke_h5_file_limit "${SMOKE_H5_FILE_LIMIT}"
-      --smoke_train_batch_limit "${SMOKE_TRAIN_BATCH_LIMIT}"
-      --smoke_val_batch_limit "${SMOKE_VAL_BATCH_LIMIT}"
+  local probe_args=()
+  local env_args=()
+  if [[ "${TRAIN_SCRIPT}" == *"/joint/"* || "${TRAIN_SCRIPT}" == *"train_joint"* ]]; then
+    local probe_config="${run_dir}/probe_joint.yaml"
+    mkdir -p "${run_dir}"
+    python -c '
+import sys
+from pathlib import Path
+import yaml
+
+src, dst, batch_size, h5_limit, train_limit, val_limit, out_dir, smoke = sys.argv[1:]
+with open(src, encoding="utf-8") as f:
+    cfg = yaml.safe_load(f) or {}
+
+for task in (cfg.get("tasks") or {}).values():
+    if task.get("enabled", True):
+        task["batch_size"] = int(batch_size)
+
+cfg.setdefault("run", {})["out_dir"] = out_dir
+cfg.setdefault("optimization", {})["train_unit"] = "steps"
+cfg["optimization"]["max_steps"] = max(1, int(train_limit))
+cfg.setdefault("checkpoint", {})["save_every_steps"] = 0
+cfg.setdefault("evaluation", {})["eval_every_steps"] = max(1, int(train_limit))
+
+if smoke == "1":
+    limits = cfg.setdefault("advanced", {}).setdefault("limits", {})
+    limits["h5_file_limit"] = int(h5_limit)
+    limits["train_batch_limit"] = int(train_limit)
+    limits["val_batch_limit"] = int(val_limit)
+
+Path(dst).parent.mkdir(parents=True, exist_ok=True)
+with open(dst, "w", encoding="utf-8") as f:
+    yaml.safe_dump(cfg, f, sort_keys=False)
+' "${JOINT_CONFIG}" "${probe_config}" "${batch_size}" "${SMOKE_H5_FILE_LIMIT}" "${SMOKE_TRAIN_BATCH_LIMIT}" "${SMOKE_VAL_BATCH_LIMIT}" "${run_dir}" "${PROBE_SMOKE_ARGS}"
+    env_args=(CONFIG="${probe_config}" OUT_DIR="${run_dir}")
+  else
+    probe_args=(
+      --batch_size "${batch_size}"
+      --epochs 1
+      --save_every 999999
+      --save_every_steps 0
+      --log_interval 1
+      --out_dir "${run_dir}"
     )
+    if [[ "${PROBE_SMOKE_ARGS}" == "1" ]]; then
+      probe_args+=(
+        --smoke_h5_file_limit "${SMOKE_H5_FILE_LIMIT}"
+        --smoke_train_batch_limit "${SMOKE_TRAIN_BATCH_LIMIT}"
+        --smoke_val_batch_limit "${SMOKE_VAL_BATCH_LIMIT}"
+      )
+    fi
   fi
 
   set +e
-  timeout "${PROBE_TIMEOUT}" \
+  env "${env_args[@]}" timeout "${PROBE_TIMEOUT}" \
     bash "${TRAIN_SCRIPT}" "${probe_args[@]}" "$@" \
       >"${log_file}" 2>&1
   local code=$?

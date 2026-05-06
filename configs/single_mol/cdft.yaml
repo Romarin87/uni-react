@@ -1,6 +1,7 @@
 # SingleMol Encoder - CDFT Pretraining
 # Stage 2: VIP/VEA + Fukui indices prediction
-# Run: python -m uni_react.train_cdft --config configs/single_mol/cdft.yaml
+# Legacy config shape. Prefer joint configs that enable vip, vea, and fukui
+# as independent tasks.
 
 # ---------------------------------------------------------------------------
 # Training mode

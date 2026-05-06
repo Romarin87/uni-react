@@ -616,6 +616,86 @@ class TestCheckpointUtils:
                 rank=0,
             )
 
+    def test_validate_restart_config_catches_nested_joint_mismatch(self):
+        """Joint restart validation should compare nested task/model sections."""
+        from uni_react.training.checkpoint import validate_restart_config
+
+        ckpt_cfg = {
+            "model": {"emb_dim": 16},
+            "tasks": {
+                "atom_mask": {
+                    "train_h5": ["old.h5"],
+                    "batch_size": 2,
+                    "params": {"mask_ratio": 0.15},
+                }
+            },
+            "schedule": {"sample_prob": {"atom_mask": 1.0}},
+            "learning_rates": {"descriptor": {"atom_mask": 1e-5}, "head": {"atom_mask": 1e-4}},
+            "optimization": {"train_unit": "steps", "max_steps": 10},
+        }
+        cur_cfg = {
+            "model": {"emb_dim": 16},
+            "tasks": {
+                "atom_mask": {
+                    "train_h5": ["new.h5"],
+                    "batch_size": 4,
+                    "params": {"mask_ratio": 0.0},
+                }
+            },
+            "schedule": {"sample_prob": {"atom_mask": 1.0}},
+            "learning_rates": {"descriptor": {"atom_mask": 1e-5}, "head": {"atom_mask": 1e-4}},
+            "optimization": {"train_unit": "steps", "max_steps": 10},
+        }
+
+        with pytest.raises(ValueError, match="tasks.atom_mask"):
+            validate_restart_config(
+                ckpt_args=ckpt_cfg,
+                cur_args=cur_cfg,
+                ignore_config_mismatch=False,
+                rank=0,
+            )
+
+        validate_restart_config(
+            ckpt_args=ckpt_cfg,
+            cur_args=cur_cfg,
+            ignore_config_mismatch=True,
+            rank=1,
+        )
+
+    def test_validate_restart_config_allows_joint_schedule_only_changes(self, capsys):
+        """Joint optimization/evaluation changes should warn, not force unsafe bypass."""
+        from uni_react.training.checkpoint import validate_restart_config
+
+        ckpt_cfg = {
+            "model": {"emb_dim": 16},
+            "tasks": {"atom_mask": {"train_h5": ["same.h5"], "batch_size": 2}},
+            "schedule": {"sample_prob": {"atom_mask": 1.0}},
+            "loss_weights": {"initial": {"atom_mask": 1.0}, "final": {"atom_mask": 1.0}},
+            "learning_rates": {"descriptor": {"atom_mask": 1e-5}, "head": {"atom_mask": 1e-4}},
+            "optimization": {"train_unit": "steps", "max_steps": 10},
+            "evaluation": {"eval_every_steps": 5},
+        }
+        cur_cfg = {
+            "model": {"emb_dim": 16},
+            "tasks": {"atom_mask": {"train_h5": ["same.h5"], "batch_size": 2}},
+            "schedule": {"sample_prob": {"atom_mask": 1.0}},
+            "loss_weights": {"initial": {"atom_mask": 1.0}, "final": {"atom_mask": 1.0}},
+            "learning_rates": {"descriptor": {"atom_mask": 1e-5}, "head": {"atom_mask": 1e-4}},
+            "optimization": {"train_unit": "steps", "max_steps": 20},
+            "evaluation": {"eval_every_steps": 10},
+        }
+
+        validate_restart_config(
+            ckpt_args=ckpt_cfg,
+            cur_args=cur_cfg,
+            ignore_config_mismatch=False,
+            rank=0,
+        )
+
+        out = capsys.readouterr().out
+        assert "optimization.max_steps" in out
+        assert "evaluation.eval_every_steps" in out
+
 
 class TestSchedulers:
     def test_cosine_scheduler_roundtrip_state(self):
@@ -633,141 +713,6 @@ class TestSchedulers:
 
         assert restored.state_dict()["step_count"] == 2
         assert restored.state_dict()["total_steps"] == 4
-
-    def test_pretrain_trainer_updates_scheduler_total_steps(self, monkeypatch, tmp_path):
-        from uni_react.configs import GeometricConfig
-        from uni_react.tasks.geometric.common.trainer import PretrainTrainer
-
-        class DummyDataset(torch.utils.data.Dataset):
-            def __len__(self):
-                return 10
-
-            def __getitem__(self, idx):
-                return {
-                    "atomic_numbers": torch.tensor([1, 6], dtype=torch.long),
-                    "input_atomic_numbers": torch.tensor([1, 94], dtype=torch.long),
-                    "coords": torch.zeros(2, 3),
-                    "coords_noisy": torch.zeros(2, 3),
-                    "noise": torch.zeros(2, 3),
-                    "mask_positions": torch.tensor([False, True]),
-                    "charges": torch.zeros(2),
-                    "charge_valid": torch.tensor([False, False]),
-                }
-
-        class DummyLoss:
-            def metric_keys(self):
-                return ["loss"]
-
-        class DummyScheduler:
-            def __init__(self):
-                self.total_steps = None
-
-            def set_total_steps(self, total_steps):
-                self.total_steps = total_steps
-
-        class DummyModel(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.proj = nn.Linear(1, 1)
-
-            def forward(self, **kwargs):
-                return {"loss": self.proj.weight.sum().unsqueeze(0)}
-
-        monkeypatch.setattr(
-            "uni_react.tasks.geometric.common.trainer.build_pretrain_dataset",
-            lambda *args, **kwargs: DummyDataset(),
-        )
-
-        cfg = GeometricConfig(
-            train_h5=["dummy.h5"],
-            batch_size=4,
-            num_workers=0,
-            epochs=3,
-            out_dir=str(tmp_path),
-        )
-        scheduler = DummyScheduler()
-        model = DummyModel()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
-        PretrainTrainer(
-            model=model,
-            loss_fn=DummyLoss(),
-            optimizer=optimizer,
-            cfg=cfg,
-            scheduler=scheduler,
-            distributed=False,
-            device=torch.device("cpu"),
-        )
-
-        # drop_last=True, so len(loader)=floor(10/4)=2 and total steps = 3 * 2
-        assert scheduler.total_steps == 6
-
-    def test_density_trainer_advances_distributed_sampler_epoch(self, tmp_path):
-        from uni_react.configs import DensityConfig
-        from uni_react.tasks.density.common.trainer import DensityPretrainTrainer
-
-        class DummyDataset(torch.utils.data.Dataset):
-            def __len__(self):
-                return 4
-
-            def __getitem__(self, idx):
-                return {
-                    "atomic_numbers": torch.tensor([1, 6], dtype=torch.long),
-                    "coords": torch.zeros(2, 3),
-                    "atom_padding": torch.tensor([False, False]),
-                    "query_points": torch.zeros(3, 3),
-                    "density_target": torch.zeros(3),
-                    "total_charge": torch.tensor(0.0),
-                    "spin_multiplicity": torch.tensor(1.0),
-                }
-
-        class DummySampler:
-            def __init__(self):
-                self.epochs = []
-
-            def set_epoch(self, epoch):
-                self.epochs.append(epoch)
-
-            def __iter__(self):
-                return iter(range(4))
-
-            def __len__(self):
-                return 4
-
-        class DummyModel(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.scale = nn.Parameter(torch.tensor(1.0))
-
-            def forward(self, **kwargs):
-                batch = kwargs["query_points"].shape[0]
-                points = kwargs["query_points"].shape[1]
-                pred = self.scale * torch.ones((batch, points))
-                return {"density_pred": pred}
-
-        sampler = DummySampler()
-        loader = torch.utils.data.DataLoader(DummyDataset(), batch_size=2, sampler=sampler)
-        cfg = DensityConfig(
-            train_h5=["dummy.h5"],
-            batch_size=2,
-            num_workers=0,
-            epochs=2,
-            out_dir=str(tmp_path),
-        )
-        model = DummyModel()
-        trainer = DensityPretrainTrainer(
-            model=model,
-            optimizer=torch.optim.Adam(model.parameters(), lr=1e-3),
-            train_loader=loader,
-            val_loader=None,
-            cfg=cfg,
-            distributed=False,
-            device=torch.device("cpu"),
-        )
-        trainer._train_sampler = sampler
-
-        trainer.train_epoch(3)
-        assert sampler.epochs == [3]
 
     def test_qm9_trainer_advances_distributed_sampler_epoch(self, monkeypatch, tmp_path):
         from uni_react.configs import QM9Config

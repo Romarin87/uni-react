@@ -3,7 +3,7 @@ import pytest
 import torch
 import numpy as np
 
-from uni_react.tasks.geometric.common.transforms import (
+from uni_react.tasks.components.transforms import (
     AddGaussianNoise,
     CenterCoords,
     Compose,

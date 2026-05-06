@@ -1,6 +1,6 @@
 # SingleMol Encoder - Electron Density Pretraining
 # Task: Electron density prediction
-# Run: python -m uni_react.train_density --config configs/single_mol/density.yaml
+# Legacy single-task density config. Prefer joint configs with tasks.electron_density.
 
 # ---------------------------------------------------------------------------
 # Training mode

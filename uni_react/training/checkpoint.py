@@ -19,6 +19,39 @@ def _config_to_dict(config: Optional[ConfigLike]) -> Optional[Dict[str, Any]]:
     return vars(config)
 
 
+def _looks_like_joint_config(config: Mapping[str, Any]) -> bool:
+    return "tasks" in config and "model" in config and "optimization" in config
+
+
+def _flatten_nested(prefix: str, value: Any) -> Dict[str, Any]:
+    if isinstance(value, Mapping):
+        out: Dict[str, Any] = {}
+        for key, child in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            out.update(_flatten_nested(path, child))
+        return out
+    return {prefix: value}
+
+
+def _joint_config_mismatches(
+    ckpt_args: Mapping[str, Any],
+    cur: Mapping[str, Any],
+    sections: tuple[str, ...],
+) -> list[tuple[str, Any, Any]]:
+    mismatches: list[tuple[str, Any, Any]] = []
+    for section in sections:
+        if section not in ckpt_args and section not in cur:
+            continue
+        old_flat = _flatten_nested(section, ckpt_args.get(section))
+        new_flat = _flatten_nested(section, cur.get(section))
+        for key in sorted(set(old_flat) | set(new_flat)):
+            old = old_flat.get(key, "<missing>")
+            new = new_flat.get(key, "<missing>")
+            if old != new:
+                mismatches.append((key, old, new))
+    return mismatches
+
+
 def build_checkpoint_dict(
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -145,6 +178,40 @@ def validate_restart_config(
     cur = _config_to_dict(cur_args)
     if cur is None:
         return
+    if _looks_like_joint_config(ckpt_args) or _looks_like_joint_config(cur):
+        strict_mismatch = _joint_config_mismatches(
+            ckpt_args,
+            cur,
+            ("model", "tasks", "schedule", "loss_weights", "learning_rates"),
+        )
+        warn_mismatch = _joint_config_mismatches(
+            ckpt_args,
+            cur,
+            ("optimization", "evaluation"),
+        )
+        if strict_mismatch and not ignore_config_mismatch:
+            lines = [
+                "Restart config mismatch on strict keys. "
+                "Use --restart_ignore_config to bypass.",
+            ]
+            lines += [f"  - {k}: ckpt={old!r}, current={new!r}" for k, old, new in strict_mismatch]
+            raise ValueError("\n".join(lines))
+        if strict_mismatch and is_main_process(rank):
+            msg = "strict key mismatch (ignored): " + ", ".join(k for k, _, _ in strict_mismatch)
+            if logger is not None:
+                logger.log({"message": msg}, phase="restart_warning")
+            else:
+                print(f"[restart] warning: {msg}")
+        if warn_mismatch and is_main_process(rank):
+            if logger is not None:
+                for k, old, new in warn_mismatch:
+                    logger.log({"key": k, "ckpt": old, "current": new}, phase="restart_warning")
+            else:
+                print("[restart] warning: config changed on non-strict keys:")
+                for k, old, new in warn_mismatch:
+                    print(f"  - {k}: ckpt={old!r}, current={new!r}")
+        return
+
     strict_mismatch = [
         (k, ckpt_args[k], cur[k])
         for k in strict_keys

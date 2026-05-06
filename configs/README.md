@@ -33,9 +33,7 @@ configs/
 
 ## Main Configs
 
-- `geometric.yaml`: geometric structure task training
-- `cdft.yaml`: electronic-structure task training
-- `density.yaml`: electron-density task training
+- grouped task recipes should be represented as `joint.yaml` task selections
 - `reaction.yaml`: reaction triplet task training
 - `qm9.yaml`: single-target QM9 task
 - `qm9_all.yaml`: multi-target QM9 task
@@ -43,15 +41,12 @@ configs/
 
 ## Smoke Configs
 
-- `single_mol/geometric.entry_smoke.json`: minimal geometric CLI smoke
-- `single_mol/cdft.entry_smoke.json`: minimal CDFT CLI smoke
+- `gotennet_l/joint.yaml`: joint task training config
 
 ## Typical Usage
 
 ```bash
-python -m uni_react.train_geometric --config configs/single_mol/geometric.yaml
-python -m uni_react.train_cdft --config configs/gotennet_b/cdft.yaml
-python -m uni_react.train_density --config configs/gotennet_l/density.yaml
+python -m uni_react.train_joint --config configs/gotennet_l/joint.yaml
 python -m uni_react.train_reaction --config configs/single_mol/reaction.yaml
 python -m uni_react.train_qm9 --config configs/gotennet_l/qm9.yaml
 ```
