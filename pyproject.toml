@@ -39,11 +39,9 @@ all = [
 ]
 
 [project.scripts]
-uni-react-train-geometric = "uni_react.train_geometric:main"
-uni-react-train-cdft = "uni_react.train_cdft:main"
-uni-react-train-density = "uni_react.train_density:main"
 uni-react-train-reaction = "uni_react.train_reaction:main"
 uni-react-train-qm9 = "uni_react.train_qm9:main"
+uni-react-train-joint = "uni_react.train_joint:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

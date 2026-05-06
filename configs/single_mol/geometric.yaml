@@ -1,6 +1,7 @@
 # SingleMol Encoder - Geometric Structure Pretraining
 # Stage 1: Atom masking + coordinate denoising + charge prediction
-# Run: python -m uni_react.train_geometric --config configs/single_mol/geometric.yaml
+# Legacy config shape. Prefer joint configs that enable atom_mask,
+# coord_denoise, and charge as independent tasks.
 
 # ---------------------------------------------------------------------------
 # Training mode

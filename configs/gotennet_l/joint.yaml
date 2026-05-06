@@ -1,0 +1,191 @@
+# GotenNet-L - Joint task training
+run:
+  type: joint_training
+  name: gotennet_l_joint
+  device: cuda
+  seed: 42
+  out_dir: runs/gotennet_l_joint
+  num_workers: 16
+
+model:
+  name: gotennet_l
+  emb_dim: 256
+  inv_layer: 2
+  se3_layer: 12
+  heads: 8
+  atom_vocab_size: 128
+  cutoff: 5.0
+  num_kernel: 64
+  path_dropout: 0.1
+  activation_dropout: 0.1
+  attn_dropout: 0.1
+
+tasks:
+  atom_mask:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
+    batch_size: 256
+    params:
+      mask_ratio: 0.15
+      mask_token_id: 94
+      min_masked: 1
+      max_masked: 0
+
+  coord_denoise:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
+    batch_size: 256
+    params:
+      noise_std: 0.1
+      no_center_coords: false
+      no_recenter_noisy: false
+    loss:
+      regression_loss: mse
+
+  charge:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_train/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/GDB13/gdb13_chno_hdf5/gdb13_chno_hdf5_val/*.h5
+    batch_size: 256
+    loss:
+      regression_loss: mse
+
+  electron_density:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/EDBench/density_h5_train/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/EDBench/density_h5_val/*.h5
+    batch_size: 64
+    params:
+      center_coords: true
+      num_query_points: 2048
+      point_hidden_dim: 128
+      cond_hidden_dim: 64
+      head_hidden_dim: 512
+      radial_sigma: 1.5
+    loss:
+      regression_loss: mse
+
+  vip:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
+    batch_size: 128
+    loss:
+      regression_loss: mse
+
+  vea:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
+    batch_size: 128
+    loss:
+      regression_loss: mse
+
+  fukui:
+    enabled: true
+    train_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/RGD1_CDFT/*.h5
+    val_h5:
+      - /inspire/ssd/project/cq-nexchem/libowen-253207030265/dataset/CDFT/t1x_CDFT/*.h5
+    batch_size: 128
+    params:
+      targets:
+        - f_plus
+        - f_minus
+        - f_zero
+    loss:
+      regression_loss: mse
+
+schedule:
+  sample_prob:
+    atom_mask: 0.15
+    coord_denoise: 0.20
+    charge: 0.00
+    electron_density: 0.35
+    vip: 0.10
+    vea: 0.10
+    fukui: 0.10
+
+loss_weights:
+  initial:
+    atom_mask: 1.0
+    coord_denoise: 1.0
+    charge: 1.0
+    electron_density: 0.1
+    vip: 1.0
+    vea: 1.0
+    fukui: 1.0
+  final:
+    atom_mask: 1.0
+    coord_denoise: 1.0
+    charge: 1.0
+    electron_density: 1.0
+    vip: 1.0
+    vea: 1.0
+    fukui: 1.0
+
+learning_rates:
+  descriptor:
+    atom_mask: 2.0e-5
+    coord_denoise: 2.0e-5
+    charge: 2.0e-5
+    electron_density: 1.0e-5
+    vip: 2.0e-5
+    vea: 2.0e-5
+    fukui: 2.0e-5
+  head:
+    atom_mask: 1.0e-4
+    coord_denoise: 1.0e-4
+    charge: 1.0e-4
+    electron_density: 2.0e-4
+    vip: 1.0e-4
+    vea: 1.0e-4
+    fukui: 1.0e-4
+
+optimization:
+  train_unit: steps
+  max_steps: 200000
+  epochs: null
+  epoch_reference_task: null
+  weight_decay: 1.0e-2
+  grad_clip: 1.0
+  lr_scheduler: cosine
+  warmup_steps: 10000
+
+evaluation:
+  eval_every_steps: 5000
+  eval_tasks: active
+  max_val_batches_per_task: 0
+  primary_metric: weighted_val_loss
+
+checkpoint:
+  init_ckpt: null
+  init_strict: false
+  restart: null
+  restart_ignore_config: false
+  save_every_steps: 10000
+  save_optimizer: true
+
+advanced:
+  limits:
+    h5_file_limit: 0
+    train_batch_limit: 0
+    val_batch_limit: 0
+  diagnostics:
+    log_file: train.log
+    metrics_file: metrics.csv
+    print_data_plan: true

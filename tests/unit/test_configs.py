@@ -5,9 +5,8 @@ from pathlib import Path
 import pytest
 
 from uni_react.configs import (
-    DensityConfig,
+    JointConfig,
     QM9Config,
-    GeometricConfig,
     ReactionConfig,
 )
 from uni_react.configs.io import dump_config, load_config, merge_cli_args
@@ -17,14 +16,32 @@ from uni_react.configs import dump_runtime_config
 from uni_react.tasks.qm9.dataset import get_qm9_target_index_map
 
 
+def _joint_config() -> JointConfig:
+    return JointConfig(
+        run={"name": "test", "device": "cpu"},
+        model={"name": "single_mol", "emb_dim": 16},
+        tasks={
+            "atom_mask": {
+                "enabled": True,
+                "train_h5": ["dummy.h5"],
+                "batch_size": 2,
+                "params": {"mask_token_id": 15},
+            }
+        },
+        schedule={"sample_prob": {"atom_mask": 1.0}},
+        learning_rates={"descriptor": {"atom_mask": 1e-5}, "head": {"atom_mask": 1e-4}},
+        optimization={"train_unit": "steps", "max_steps": 1},
+    )
+
+
 class TestLoadDumpConfig:
     def test_roundtrip_json(self, tmp_path):
-        cfg = GeometricConfig(emb_dim=128, epochs=5)
+        cfg = _joint_config()
         path = str(tmp_path / "cfg.json")
         dump_config(cfg, path)
-        loaded = load_config(path, GeometricConfig)
-        assert loaded.emb_dim == 128
-        assert loaded.epochs == 5
+        loaded = load_config(path, JointConfig)
+        assert loaded.run["name"] == "test"
+        assert loaded.optimization["max_steps"] == 1
 
     def test_roundtrip_yaml(self, tmp_path):
         pytest.importorskip("yaml")
@@ -43,14 +60,6 @@ class TestLoadDumpConfig:
         assert loaded.restart == "resume.pt"
         assert loaded.restart_ignore_config is True
         assert loaded.save_optimizer is True
-
-    def test_roundtrip_density_restart_fields(self, tmp_path):
-        cfg = DensityConfig(restart="density.pt", restart_ignore_config=True)
-        path = str(tmp_path / "density.json")
-        dump_config(cfg, path)
-        loaded = load_config(path, DensityConfig)
-        assert loaded.restart == "density.pt"
-        assert loaded.restart_ignore_config is True
 
     def test_roundtrip_qm9_restart_fields(self, tmp_path):
         cfg = QM9Config(restart="qm9.pt", restart_ignore_config=True)
@@ -79,38 +88,38 @@ class TestLoadDumpConfig:
         path = str(tmp_path / "bad.json")
         Path(path).write_text(json.dumps({"nonexistent_field": 99}))
         with pytest.raises(ValueError, match="Unknown config keys"):
-            load_config(path, GeometricConfig)
+            load_config(path, JointConfig)
 
     def test_missing_file_raises(self):
         with pytest.raises(FileNotFoundError):
-            load_config("/nonexistent/path.json", GeometricConfig)
+            load_config("/nonexistent/path.json", JointConfig)
 
 
 class TestMergeCLIArgs:
     def test_override_applies(self):
-        cfg = GeometricConfig(emb_dim=256)
-        result = merge_cli_args(cfg, {"emb_dim": 128})
-        assert result.emb_dim == 128
+        cfg = _joint_config()
+        result = merge_cli_args(cfg, {"run": {"name": "override"}})
+        assert result.run["name"] == "override"
 
     def test_none_values_skipped(self):
-        cfg = GeometricConfig(emb_dim=256)
-        result = merge_cli_args(cfg, {"emb_dim": None})
-        assert result.emb_dim == 256
+        cfg = _joint_config()
+        result = merge_cli_args(cfg, {"run": None})
+        assert result.run["name"] == "test"
 
     def test_unknown_keys_ignored(self):
-        cfg = GeometricConfig(emb_dim=256)
-        result = merge_cli_args(cfg, {"config": "some_file.yaml", "emb_dim": 64})
-        assert result.emb_dim == 64
+        cfg = _joint_config()
+        result = merge_cli_args(cfg, {"config": "some_file.yaml", "run": {"name": "ok"}})
+        assert result.run["name"] == "ok"
 
     def test_original_unchanged(self):
-        cfg = GeometricConfig(emb_dim=256)
-        merge_cli_args(cfg, {"emb_dim": 128})
-        assert cfg.emb_dim == 256  # original not mutated
+        cfg = _joint_config()
+        merge_cli_args(cfg, {"run": {"name": "override"}})
+        assert cfg.run["name"] == "test"  # original not mutated
 
 
 class TestEntrypointUtils:
     def test_dump_runtime_config_prefers_json_when_yaml_unavailable(self, monkeypatch, tmp_path):
-        cfg = GeometricConfig()
+        cfg = _joint_config()
 
         def fake_dump_config(config, path):
             path = Path(path)
